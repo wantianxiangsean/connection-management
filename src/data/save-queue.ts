@@ -21,4 +21,3 @@ export class SaveQueue<T> {
     return this.tail
   }
 }
-

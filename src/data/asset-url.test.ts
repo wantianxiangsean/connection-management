@@ -27,4 +27,3 @@ describe('storage asset URLs', () => {
     expect(repository.getAttachmentUrl).not.toHaveBeenCalled()
   })
 })
-

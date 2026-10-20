@@ -23,4 +23,3 @@ describe('snapshot save queue', () => {
     expect(save.mock.calls.map(([value]) => value)).toEqual(['first', 'second'])
   })
 })
-

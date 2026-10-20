@@ -7,4 +7,3 @@ export async function resolveAssetUrl(
   if (/^(https?:|data:|blob:)/i.test(path)) return path
   return repository.getAttachmentUrl(path)
 }
-
