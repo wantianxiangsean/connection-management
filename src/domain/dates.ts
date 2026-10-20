@@ -62,7 +62,7 @@ export function resolveNextDateOccurrence(
         ? `${date.year}-${String(date.month).padStart(2, '0')}-${String(
             date.day,
           ).padStart(2, '0')}`
-        : lunarOccurrence({ ...date, year }, date.year)?.date ?? null
+        : lunarOccurrence(date, date.year)?.date ?? null
     return oneTime
       ? { date: oneTime, fallbackToRegularMonth: false }
       : null
