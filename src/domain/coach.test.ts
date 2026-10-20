@@ -66,5 +66,50 @@ describe('relationship coaching', () => {
       label: '稍后提醒',
     })
   })
+
+  it('surfaces a due detail follow-up even without a cadence', () => {
+    expect(
+      getCoachStatus(
+        person,
+        [],
+        [],
+        '2026-10-20',
+        [
+          {
+            id: 'd1',
+            personId: 'p1',
+            category: '身体情况',
+            content: '膝盖旧伤',
+            observedOn: '2026-10-01',
+            followUpOn: '2026-10-22',
+            createdAt: '',
+            updatedAt: '',
+          },
+        ],
+        [],
+      ),
+    ).toMatchObject({
+      state: 'soon',
+      label: '近期',
+      reason: '2 天后回访这条细节：膝盖旧伤',
+    })
+  })
+
+  it('surfaces an approaching active goal', () => {
+    expect(
+      getCoachStatus(person, [], [], '2026-10-20', [], [
+        {
+          id: 'g1',
+          personId: 'p1',
+          title: '完成工作室网站',
+          status: 'active',
+          targetDate: '2026-10-25',
+        },
+      ]),
+    ).toMatchObject({
+      state: 'soon',
+      reason: '5 天后是这个目标的节点：完成工作室网站',
+    })
+  })
 })
 

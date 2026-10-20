@@ -27,8 +27,10 @@ function createDefaultRepository(): WorkspaceRepository {
   return new LocalRepository()
 }
 
+const defaultRepository = createDefaultRepository()
+
 export function App({
-  repository = createDefaultRepository(),
+  repository = defaultRepository,
 }: {
   repository?: WorkspaceRepository
 }) {
@@ -81,7 +83,7 @@ export function App({
             >
               <Route index element={<ArchivePage />} />
               <Route path="people/:personId" element={<PersonPage />} />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="settings/*" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

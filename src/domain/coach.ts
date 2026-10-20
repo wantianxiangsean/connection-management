@@ -1,6 +1,8 @@
 import { differenceInCalendarDays } from 'date-fns'
 import type {
   CoachStatus,
+  DetailEntry,
+  Goal,
   ImportantDate,
   Interaction,
   Person,
@@ -18,6 +20,8 @@ export function getCoachStatus(
   interactions: Interaction[],
   importantDates: ImportantDate[],
   today: string,
+  detailEntries: DetailEntry[] = [],
+  goals: Goal[] = [],
 ): CoachStatus {
   if (person.snoozedUntil && person.snoozedUntil >= today) {
     return {
@@ -29,34 +33,72 @@ export function getCoachStatus(
     }
   }
 
-  const nextImportantDate = importantDates
+  const start = new Date(`${today}T00:00:00`)
+  const importantSignal = importantDates
     .map((date) => ({
-      date,
-      occurrence: getNextDateOccurrence(date, today),
+      days: getNextDateOccurrence(date, today)
+        ? differenceInCalendarDays(
+            new Date(`${getNextDateOccurrence(date, today)}T00:00:00`),
+            start,
+          )
+        : null,
+      reason: `即将到来：${date.label}`,
+      priority: 80,
     }))
     .filter(
-      (item): item is { date: ImportantDate; occurrence: string } =>
-        Boolean(item.occurrence),
+      (item): item is { days: number; reason: string; priority: number } =>
+        item.days !== null && item.days >= 0 && item.days <= 30,
     )
-    .sort((a, b) => a.occurrence.localeCompare(b.occurrence))[0]
 
-  const importantDays = nextImportantDate
-    ? differenceInCalendarDays(
-        new Date(`${nextImportantDate.occurrence}T00:00:00`),
-        new Date(`${today}T00:00:00`),
-      )
-    : null
+  const detailSignal = detailEntries
+    .filter((detail) => detail.followUpOn && detail.followUpOn >= today)
+    .map((detail) => ({
+      days: differenceInCalendarDays(
+        new Date(`${detail.followUpOn}T00:00:00`),
+        start,
+      ),
+      reason: `${differenceInCalendarDays(
+        new Date(`${detail.followUpOn}T00:00:00`),
+        start,
+      )} 天后回访这条细节：${detail.content}`,
+      priority: 88,
+    }))
+
+  const goalSignal = goals
+    .filter((goal) => goal.status === 'active' && goal.targetDate)
+    .map((goal) => ({
+      days: differenceInCalendarDays(
+        new Date(`${goal.targetDate}T00:00:00`),
+        start,
+      ),
+      reason: `${differenceInCalendarDays(
+        new Date(`${goal.targetDate}T00:00:00`),
+        start,
+      )} 天后是这个目标的节点：${goal.title}`,
+      priority: 84,
+    }))
+    .filter((signal) => signal.days >= 0 && signal.days <= 30)
+
+  const nearSignal = [...detailSignal, ...goalSignal, ...importantSignal]
+    .filter((signal) => signal.days <= 30)
+    .sort((a, b) => a.days - b.days || b.priority - a.priority)[0]
 
   if (person.cadenceDays === null) {
+    if (nearSignal) {
+      return {
+        state: nearSignal.days <= 7 ? 'soon' : 'steady',
+        label: nearSignal.days <= 7 ? '近期' : '记着呢',
+        reason: nearSignal.reason,
+        daysUntilDue: nearSignal.days,
+        priority: nearSignal.priority - nearSignal.days,
+      }
+    }
     return {
       state: 'unset',
       label: '未设节奏',
-      reason:
-        importantDays !== null && importantDays <= 30
-          ? `${importantDays} 天后是${nextImportantDate.date.label}`
-          : '设置联系周期后，会在这里给出提醒',
+      reason: '设置联系周期后，会在这里给出提醒',
       daysUntilDue: null,
-      priority: importantDays !== null && importantDays <= 30 ? 70 : 0,
+      priority: 0,
     }
   }
 
@@ -84,6 +126,16 @@ export function getCoachStatus(
           : '已经到了你设定的联系时间',
       daysUntilDue,
       priority: 100 + Math.abs(daysUntilDue),
+    }
+  }
+
+  if (nearSignal) {
+    return {
+      state: 'soon',
+      label: '近期',
+      reason: nearSignal.reason,
+      daysUntilDue,
+      priority: nearSignal.priority - nearSignal.days,
     }
   }
 

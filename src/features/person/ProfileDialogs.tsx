@@ -5,10 +5,16 @@ import {
   channelLabels,
   tierLabels,
   type CalendarType,
+  type CareerEntry,
   type CustomFieldDefinition,
   type CustomFieldValue,
+  type DetailEntry,
+  type FamilyMember,
+  type Goal,
   type GoalStatus,
+  type ImportantDate,
   type InteractionChannel,
+  type Interaction,
   type Person,
   type RelationshipTier,
 } from '../../domain/types'
@@ -21,10 +27,12 @@ export function BasicProfileDialog({
   person,
   onClose,
   onSave,
+  onDelete,
 }: {
   person: Person
   onClose: () => void
   onSave: (patch: Partial<Person>) => void
+  onDelete: () => void
 }) {
   const { register, handleSubmit } = useForm({
     defaultValues: {
@@ -158,6 +166,9 @@ export function BasicProfileDialog({
           <textarea {...register('firstMetStory')} rows={3} />
         </label>
         <footer>
+          <button type="button" className="danger-text-button" onClick={onDelete}>
+            移入回收站
+          </button>
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -172,10 +183,13 @@ export function BasicProfileDialog({
 
 export function DetailDialog({
   personId,
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
   personId: string
+  initial?: DetailEntry
   onClose: () => void
   onSave: (value: {
     personId: string
@@ -184,11 +198,14 @@ export function DetailDialog({
     observedOn: string
     followUpOn: string | null
   }) => void
+  onDelete?: () => void
 }) {
-  const [category, setCategory] = useState('近况')
-  const [content, setContent] = useState('')
-  const [observedOn, setObservedOn] = useState(todayValue())
-  const [followUpOn, setFollowUpOn] = useState('')
+  const [category, setCategory] = useState(initial?.category ?? '近况')
+  const [content, setContent] = useState(initial?.content ?? '')
+  const [observedOn, setObservedOn] = useState(
+    initial?.observedOn ?? todayValue(),
+  )
+  const [followUpOn, setFollowUpOn] = useState(initial?.followUpOn ?? '')
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -203,7 +220,7 @@ export function DetailDialog({
   }
 
   return (
-    <DialogFrame title="添加细节" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑细节' : '添加细节'} onClose={onClose}>
       <form className="stack-form" onSubmit={submit}>
         <label>
           <span>类别</span>
@@ -251,6 +268,11 @@ export function DetailDialog({
           </label>
         </div>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除这条细节
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -338,18 +360,22 @@ export function ConnectionDialog({
 }
 
 export function FamilyDialog({
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
+  initial?: FamilyMember
   onClose: () => void
   onSave: (value: { name: string; relation: string; birthday: string | null; note: string }) => void
+  onDelete?: () => void
 }) {
-  const [name, setName] = useState('')
-  const [relation, setRelation] = useState('')
-  const [birthday, setBirthday] = useState('')
-  const [note, setNote] = useState('')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [relation, setRelation] = useState(initial?.relation ?? '')
+  const [birthday, setBirthday] = useState(initial?.birthday ?? '')
+  const [note, setNote] = useState(initial?.note ?? '')
   return (
-    <DialogFrame title="添加家庭成员" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑家庭成员' : '添加家庭成员'} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={(event) => {
@@ -385,6 +411,11 @@ export function FamilyDialog({
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} />
         </label>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -398,9 +429,12 @@ export function FamilyDialog({
 }
 
 export function CareerDialog({
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
+  initial?: CareerEntry
   onClose: () => void
   onSave: (value: {
     organization: string
@@ -409,14 +443,15 @@ export function CareerDialog({
     endedOn: string | null
     note: string
   }) => void
+  onDelete?: () => void
 }) {
-  const [organization, setOrganization] = useState('')
-  const [title, setTitle] = useState('')
-  const [startedOn, setStartedOn] = useState('')
-  const [endedOn, setEndedOn] = useState('')
-  const [note, setNote] = useState('')
+  const [organization, setOrganization] = useState(initial?.organization ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [startedOn, setStartedOn] = useState(initial?.startedOn ?? '')
+  const [endedOn, setEndedOn] = useState(initial?.endedOn ?? '')
+  const [note, setNote] = useState(initial?.note ?? '')
   return (
-    <DialogFrame title="添加职业经历" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑职业经历' : '添加职业经历'} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={(event) => {
@@ -454,6 +489,11 @@ export function CareerDialog({
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} />
         </label>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -467,9 +507,12 @@ export function CareerDialog({
 }
 
 export function GoalDialog({
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
+  initial?: Goal
   onClose: () => void
   onSave: (value: {
     title: string
@@ -477,13 +520,14 @@ export function GoalDialog({
     status: GoalStatus
     targetDate: string | null
   }) => void
+  onDelete?: () => void
 }) {
-  const [title, setTitle] = useState('')
-  const [details, setDetails] = useState('')
-  const [status, setStatus] = useState<GoalStatus>('active')
-  const [targetDate, setTargetDate] = useState('')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [details, setDetails] = useState(initial?.details ?? '')
+  const [status, setStatus] = useState<GoalStatus>(initial?.status ?? 'active')
+  const [targetDate, setTargetDate] = useState(initial?.targetDate ?? '')
   return (
-    <DialogFrame title="添加目标" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑目标' : '添加目标'} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={(event) => {
@@ -519,6 +563,11 @@ export function GoalDialog({
           </label>
         </div>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -532,9 +581,12 @@ export function GoalDialog({
 }
 
 export function ImportantDateDialog({
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
+  initial?: ImportantDate
   onClose: () => void
   onSave: (value: {
     label: string
@@ -546,17 +598,22 @@ export function ImportantDateDialog({
     repeatAnnually: boolean
     note: string
   }) => void
+  onDelete?: () => void
 }) {
-  const [label, setLabel] = useState('')
-  const [calendarType, setCalendarType] = useState<CalendarType>('gregorian')
-  const [month, setMonth] = useState(1)
-  const [day, setDay] = useState(1)
-  const [year, setYear] = useState('')
-  const [isLeapMonth, setIsLeapMonth] = useState(false)
-  const [repeatAnnually, setRepeatAnnually] = useState(true)
-  const [note, setNote] = useState('')
+  const [label, setLabel] = useState(initial?.label ?? '')
+  const [calendarType, setCalendarType] = useState<CalendarType>(
+    initial?.calendarType ?? 'gregorian',
+  )
+  const [month, setMonth] = useState(initial?.month ?? 1)
+  const [day, setDay] = useState(initial?.day ?? 1)
+  const [year, setYear] = useState(initial?.year ? String(initial.year) : '')
+  const [isLeapMonth, setIsLeapMonth] = useState(initial?.isLeapMonth ?? false)
+  const [repeatAnnually, setRepeatAnnually] = useState(
+    initial?.repeatAnnually ?? true,
+  )
+  const [note, setNote] = useState(initial?.note ?? '')
   return (
-    <DialogFrame title="添加重要日期" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑重要日期' : '添加重要日期'} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={(event) => {
@@ -622,6 +679,11 @@ export function ImportantDateDialog({
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} />
         </label>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
@@ -635,21 +697,29 @@ export function ImportantDateDialog({
 }
 
 export function InteractionDialog({
+  initial,
   onClose,
   onSave,
+  onDelete,
 }: {
+  initial?: Interaction
   onClose: () => void
   onSave: (value: {
     occurredOn: string
     channel: InteractionChannel
     summary: string
   }) => void
+  onDelete?: () => void
 }) {
-  const [occurredOn, setOccurredOn] = useState(todayValue())
-  const [channel, setChannel] = useState<InteractionChannel>('meeting')
-  const [summary, setSummary] = useState('')
+  const [occurredOn, setOccurredOn] = useState(
+    initial?.occurredOn ?? todayValue(),
+  )
+  const [channel, setChannel] = useState<InteractionChannel>(
+    initial?.channel ?? 'meeting',
+  )
+  const [summary, setSummary] = useState(initial?.summary ?? '')
   return (
-    <DialogFrame title="记录互动" onClose={onClose}>
+    <DialogFrame title={initial ? '编辑互动' : '记录互动'} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={(event) => {
@@ -679,6 +749,11 @@ export function InteractionDialog({
           <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={5} required />
         </label>
         <footer>
+          {initial && onDelete ? (
+            <button type="button" className="danger-text-button" onClick={onDelete}>
+              删除
+            </button>
+          ) : null}
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>

@@ -91,10 +91,15 @@ export function ArchivePage() {
           bundle.interactions,
           bundle.importantDates,
           today,
+          bundle.detailEntries,
+          bundle.goals,
         ),
       }
     })
-    .filter((item) => item && ['due', 'soon'].includes(item.status.state))
+    .filter(
+      (item) =>
+        item && !['unset', 'snoozed'].includes(item.status.state),
+    )
     .sort((a, b) => (b?.status.priority ?? 0) - (a?.status.priority ?? 0))
     .slice(0, 3)
 
@@ -151,7 +156,14 @@ export function ArchivePage() {
     if (column === 'coach') {
       const bundle = getPersonBundle(snapshot, person.id)
       const status = bundle
-        ? getCoachStatus(person, bundle.interactions, bundle.importantDates, today)
+        ? getCoachStatus(
+            person,
+            bundle.interactions,
+            bundle.importantDates,
+            today,
+            bundle.detailEntries,
+            bundle.goals,
+          )
         : null
       return (
         <span className={`coach-pill coach-${status?.state ?? 'unset'}`}>

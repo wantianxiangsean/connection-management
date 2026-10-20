@@ -13,8 +13,20 @@ export default defineConfig({
     reuseExistingServer: true,
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['iPhone 13'] } },
+    {
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+    {
+      name: 'mobile',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
 })
 

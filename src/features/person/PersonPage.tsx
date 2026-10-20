@@ -61,6 +61,7 @@ export function PersonPage() {
   const { personId = '' } = useParams()
   const { snapshot, update, repository } = useWorkspace()
   const [dialog, setDialog] = useState<DialogName>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const bundle = getPersonBundle(snapshot, personId)
 
@@ -86,6 +87,8 @@ export function PersonPage() {
     bundle.interactions,
     bundle.importantDates,
     today,
+    bundle.detailEntries,
+    bundle.goals,
   )
   const upcomingDates = bundle.importantDates
     .flatMap((date) =>
@@ -103,6 +106,16 @@ export function PersonPage() {
       ),
     }))
     setDialog(null)
+  }
+
+  function openDialog(name: DialogName, recordId: string | null = null) {
+    setEditingId(recordId)
+    setDialog(name)
+  }
+
+  function closeDialog() {
+    setDialog(null)
+    setEditingId(null)
   }
 
   async function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
@@ -160,7 +173,7 @@ export function PersonPage() {
               type="button"
               className="icon-button light"
               aria-label="编辑基本资料"
-              onClick={() => setDialog('basic')}
+              onClick={() => openDialog('basic')}
             >
               <Pencil size={16} />
             </button>
@@ -229,7 +242,7 @@ export function PersonPage() {
             </div>
             <p>{coach.reason}</p>
             <div className="identity-coach-actions">
-              <button type="button" onClick={() => setDialog('interaction')}>
+              <button type="button" onClick={() => openDialog('interaction')}>
                 记录互动
               </button>
               <button
@@ -300,14 +313,14 @@ export function PersonPage() {
                   <button
                     type="button"
                     className="text-button"
-                    onClick={() => setDialog('family')}
+                    onClick={() => openDialog('family')}
                   >
                     添加家庭成员
                   </button>
                   <button
                     type="button"
                     className="text-button"
-                    onClick={() => setDialog('date')}
+                    onClick={() => openDialog('date')}
                   >
                     添加重要日期
                   </button>
@@ -334,6 +347,14 @@ export function PersonPage() {
                           </strong>
                           {member.note ? <p>{member.note}</p> : null}
                         </div>
+                        <button
+                          type="button"
+                          className="row-edit-button"
+                          aria-label={`编辑家庭成员${member.name}`}
+                          onClick={() => openDialog('family', member.id)}
+                        >
+                          编辑
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -356,6 +377,14 @@ export function PersonPage() {
                             {date.repeatAnnually ? ' · 每年' : ''}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          className="row-edit-button"
+                          aria-label={`编辑重要日期${date.label}`}
+                          onClick={() => openDialog('date', date.id)}
+                        >
+                          编辑
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -375,14 +404,14 @@ export function PersonPage() {
                   <button
                     type="button"
                     className="text-button"
-                    onClick={() => setDialog('career')}
+                    onClick={() => openDialog('career')}
                   >
                     添加职业经历
                   </button>
                   <button
                     type="button"
                     className="text-button"
-                    onClick={() => setDialog('goal')}
+                    onClick={() => openDialog('goal')}
                   >
                     添加目标
                   </button>
@@ -404,6 +433,14 @@ export function PersonPage() {
                     <p>{entry.organization}</p>
                     {entry.note ? <small>{entry.note}</small> : null}
                   </div>
+                  <button
+                    type="button"
+                    className="row-edit-button career-edit"
+                    aria-label={`编辑职业经历${entry.title}`}
+                    onClick={() => openDialog('career', entry.id)}
+                  >
+                    编辑
+                  </button>
                 </article>
               ))}
             </div>
@@ -419,6 +456,14 @@ export function PersonPage() {
                   </span>
                   <strong>{goal.title}</strong>
                   {goal.details ? <p>{goal.details}</p> : null}
+                  <button
+                    type="button"
+                    className="row-edit-button"
+                    aria-label={`编辑目标${goal.title}`}
+                    onClick={() => openDialog('goal', goal.id)}
+                  >
+                    编辑
+                  </button>
                 </article>
               ))}
             </div>
@@ -432,7 +477,7 @@ export function PersonPage() {
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => setDialog('connection')}
+                  onClick={() => openDialog('connection')}
                 >
                   添加共同认识
                 </button>
@@ -475,7 +520,7 @@ export function PersonPage() {
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => setDialog('detail')}
+                  onClick={() => openDialog('detail')}
                 >
                   添加细节
                 </button>
@@ -494,6 +539,14 @@ export function PersonPage() {
                     {detail.followUpOn ? (
                       <small>回访提醒 · {detail.followUpOn}</small>
                     ) : null}
+                    <button
+                      type="button"
+                      className="row-edit-button"
+                      aria-label={`编辑细节${detail.category}`}
+                      onClick={() => openDialog('detail', detail.id)}
+                    >
+                      编辑
+                    </button>
                   </div>
                 </article>
               ))}
@@ -513,7 +566,7 @@ export function PersonPage() {
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => setDialog('custom')}
+                  onClick={() => openDialog('custom')}
                 >
                   编辑补充资料
                 </button>
@@ -547,7 +600,7 @@ export function PersonPage() {
                   <button
                     type="button"
                     className="text-button"
-                    onClick={() => setDialog('interaction')}
+                    onClick={() => openDialog('interaction')}
                   >
                     记录互动
                   </button>
@@ -577,6 +630,14 @@ export function PersonPage() {
                       </strong>
                       <p>{interaction.summary}</p>
                     </div>
+                    <button
+                      type="button"
+                      className="row-edit-button"
+                      aria-label={`编辑互动${interaction.occurredOn}`}
+                      onClick={() => openDialog('interaction', interaction.id)}
+                    >
+                      编辑
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -610,29 +671,60 @@ export function PersonPage() {
       {dialog === 'basic' ? (
         <BasicProfileDialog
           person={person}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onSave={updatePerson}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              people: current.people.map((item) =>
+                item.id === person.id
+                  ? { ...item, deletedAt: new Date().toISOString() }
+                  : item,
+              ),
+            }))
+            closeDialog()
+          }}
         />
       ) : null}
       {dialog === 'detail' ? (
         <DetailDialog
           personId={person.id}
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.detailEntries.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             const timestamp = new Date().toISOString()
             update((current) => ({
               ...current,
-              detailEntries: [
-                ...current.detailEntries,
-                {
-                  ...value,
-                  id: `detail-${crypto.randomUUID()}`,
-                  createdAt: timestamp,
-                  updatedAt: timestamp,
-                },
-              ],
+              detailEntries: editingId
+                ? current.detailEntries.map((item) =>
+                    item.id === editingId
+                      ? { ...item, ...value, updatedAt: timestamp }
+                      : item,
+                  )
+                : [
+                    ...current.detailEntries,
+                    {
+                      ...value,
+                      id: `detail-${crypto.randomUUID()}`,
+                      createdAt: timestamp,
+                      updatedAt: timestamp,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              detailEntries: current.detailEntries.filter(
+                (item) => item.id !== editingId,
+              ),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
@@ -641,105 +733,193 @@ export function PersonPage() {
           person={person}
           people={snapshot.people}
           existingIds={bundle.connections.map((item) => item.id)}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onSave={(target) => {
             update((current) => addConnection(current, person.id, target))
-            setDialog(null)
+            closeDialog()
           }}
         />
       ) : null}
       {dialog === 'family' ? (
         <FamilyDialog
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.familyMembers.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             update((current) => ({
               ...current,
-              familyMembers: [
-                ...current.familyMembers,
-                {
-                  ...value,
-                  id: `family-${crypto.randomUUID()}`,
-                  personId: person.id,
-                },
-              ],
+              familyMembers: editingId
+                ? current.familyMembers.map((item) =>
+                    item.id === editingId ? { ...item, ...value } : item,
+                  )
+                : [
+                    ...current.familyMembers,
+                    {
+                      ...value,
+                      id: `family-${crypto.randomUUID()}`,
+                      personId: person.id,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              familyMembers: current.familyMembers.filter(
+                (item) => item.id !== editingId,
+              ),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
       {dialog === 'career' ? (
         <CareerDialog
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.careerEntries.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             update((current) => ({
               ...current,
-              careerEntries: [
-                ...current.careerEntries,
-                {
-                  ...value,
-                  id: `career-${crypto.randomUUID()}`,
-                  personId: person.id,
-                },
-              ],
+              careerEntries: editingId
+                ? current.careerEntries.map((item) =>
+                    item.id === editingId ? { ...item, ...value } : item,
+                  )
+                : [
+                    ...current.careerEntries,
+                    {
+                      ...value,
+                      id: `career-${crypto.randomUUID()}`,
+                      personId: person.id,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              careerEntries: current.careerEntries.filter(
+                (item) => item.id !== editingId,
+              ),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
       {dialog === 'goal' ? (
         <GoalDialog
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.goals.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             update((current) => ({
               ...current,
-              goals: [
-                ...current.goals,
-                {
-                  ...value,
-                  id: `goal-${crypto.randomUUID()}`,
-                  personId: person.id,
-                },
-              ],
+              goals: editingId
+                ? current.goals.map((item) =>
+                    item.id === editingId ? { ...item, ...value } : item,
+                  )
+                : [
+                    ...current.goals,
+                    {
+                      ...value,
+                      id: `goal-${crypto.randomUUID()}`,
+                      personId: person.id,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              goals: current.goals.filter((item) => item.id !== editingId),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
       {dialog === 'date' ? (
         <ImportantDateDialog
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.importantDates.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             update((current) => ({
               ...current,
-              importantDates: [
-                ...current.importantDates,
-                {
-                  ...value,
-                  id: `date-${crypto.randomUUID()}`,
-                  personId: person.id,
-                },
-              ],
+              importantDates: editingId
+                ? current.importantDates.map((item) =>
+                    item.id === editingId ? { ...item, ...value } : item,
+                  )
+                : [
+                    ...current.importantDates,
+                    {
+                      ...value,
+                      id: `date-${crypto.randomUUID()}`,
+                      personId: person.id,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              importantDates: current.importantDates.filter(
+                (item) => item.id !== editingId,
+              ),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
       {dialog === 'interaction' ? (
         <InteractionDialog
-          onClose={() => setDialog(null)}
+          initial={
+            editingId
+              ? bundle.interactions.find((item) => item.id === editingId)
+              : undefined
+          }
+          onClose={closeDialog}
           onSave={(value) => {
             update((current) => ({
               ...current,
-              interactions: [
-                ...current.interactions,
-                {
-                  ...value,
-                  id: `interaction-${crypto.randomUUID()}`,
-                  personId: person.id,
-                },
-              ],
+              interactions: editingId
+                ? current.interactions.map((item) =>
+                    item.id === editingId ? { ...item, ...value } : item,
+                  )
+                : [
+                    ...current.interactions,
+                    {
+                      ...value,
+                      id: `interaction-${crypto.randomUUID()}`,
+                      personId: person.id,
+                    },
+                  ],
             }))
-            setDialog(null)
+            closeDialog()
+          }}
+          onDelete={() => {
+            update((current) => ({
+              ...current,
+              interactions: current.interactions.filter(
+                (item) => item.id !== editingId,
+              ),
+            }))
+            closeDialog()
           }}
         />
       ) : null}
@@ -748,7 +928,7 @@ export function PersonPage() {
           personId={person.id}
           fields={activeCustomFields}
           values={bundle.customValues}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onSave={(values) => {
             update((current) => ({
               ...current,
@@ -759,7 +939,7 @@ export function PersonPage() {
                 ...values,
               ],
             }))
-            setDialog(null)
+            closeDialog()
           }}
         />
       ) : null}
