@@ -1325,6 +1325,26 @@ ul {
   padding: 34px 0 90px;
 }
 
+.person-topbar {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.person-edit-button {
+  border-color: var(--line);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.person-edit-button:hover {
+  border-color: rgba(198, 103, 80, 0.34);
+  color: var(--seal);
+  background: rgba(255, 255, 255, 0.86);
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -1359,7 +1379,7 @@ ul {
   box-shadow:
     0 26px 60px rgba(56, 91, 76, 0.13),
     inset 0 1px rgba(255, 255, 255, 0.72);
-  padding: 27px 28px 30px;
+  padding: 20px 24px 24px;
 }
 
 .identity-card::before {
@@ -1449,6 +1469,7 @@ ul {
 }
 
 .identity-role {
+  margin-top: 6px;
   color: var(--ink-faint);
   font-size: 0.7rem;
   letter-spacing: 0.12em;
@@ -1456,10 +1477,10 @@ ul {
 }
 
 .identity-card h1 {
-  margin-top: 5px;
+  margin-top: 14px;
   color: var(--ink);
   font-family: var(--display);
-  font-size: clamp(2rem, 3vw, 2.7rem);
+  font-size: clamp(1.85rem, 2.7vw, 2.35rem);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-align: center;
@@ -1484,8 +1505,8 @@ ul {
   border-top: 1px solid rgba(49, 95, 82, 0.11);
   border-bottom: 1px solid rgba(49, 95, 82, 0.11);
   grid-template-columns: repeat(3, 1fr);
-  margin-top: 28px;
-  padding: 18px 0;
+  margin-top: 20px;
+  padding: 14px 0;
 }
 
 .identity-stats div {
@@ -1510,7 +1531,7 @@ ul {
 }
 
 .first-meeting {
-  margin-top: 25px;
+  margin-top: 18px;
 }
 
 .first-meeting .section-overline {
@@ -1566,8 +1587,8 @@ ul {
 
 .identity-coach {
   border-top: 1px solid rgba(49, 95, 82, 0.11);
-  margin-top: 24px;
-  padding-top: 18px;
+  margin-top: 18px;
+  padding-top: 14px;
 }
 
 .identity-coach > div:first-child {
@@ -1727,6 +1748,10 @@ ul {
   color: var(--ink-soft);
   font-size: 0.85rem;
   line-height: 1.8;
+}
+
+.notes-copy {
+  white-space: pre-wrap;
 }
 
 .split-lists {

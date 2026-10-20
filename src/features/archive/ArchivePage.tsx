@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { Fragment, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { format } from 'date-fns'
+import { differenceInCalendarDays, format } from 'date-fns'
 import { getArchiveColumns } from '../../domain/archive'
 import {
   getSurnameInitial,
@@ -156,34 +156,52 @@ export function ArchivePage() {
     .flatMap((person) => {
       const bundle = getPersonBundle(snapshot, person.id)
       if (!bundle) return []
-      return [
-        {
-          person,
-          status: getCoachStatus(
-            person,
-            bundle.interactions,
-            bundle.importantDates,
-            today,
-            bundle.detailEntries,
-            bundle.goals,
-          ),
-        },
-      ]
-    })
-    .filter(
-      (item) =>
-        !['unset', 'snoozed'].includes(item.status.state),
-    )
-    .filter((item) => {
       const selectedRange = coachRanges.find(
         (range) => range.value === coachRange,
       )!
-      return (
-        item.status.daysUntilDue !== null &&
-        item.status.daysUntilDue <= selectedRange.maxDays
-      )
+      const dateSignals = getUpcomingDates(
+        bundle.importantDates,
+        today,
+        selectedRange.maxDays,
+      ).map((item) => {
+        const days = differenceInCalendarDays(
+          new Date(`${item.occurrence.date}T00:00:00`),
+          new Date(`${today}T00:00:00`),
+        )
+        return {
+          days,
+          reason:
+            days === 0
+              ? `今天是${item.date.label}，记得问候`
+              : `${days} 天后是${item.date.label}，可以提前准备`,
+          priority: 90 - days,
+        }
+      })
+      const followUpSignals = bundle.detailEntries
+        .filter(
+          (detail) => detail.followUpOn && detail.followUpOn >= today,
+        )
+        .map((detail) => {
+          const days = differenceInCalendarDays(
+            new Date(`${detail.followUpOn}T00:00:00`),
+            new Date(`${today}T00:00:00`),
+          )
+          return {
+            days,
+            reason:
+              days === 0
+                ? `今天回访这条细节：${detail.content}`
+                : `${days} 天后回访这条细节：${detail.content}`,
+            priority: 88 - days,
+          }
+        })
+        .filter((signal) => signal.days <= selectedRange.maxDays)
+      const signal = [...dateSignals, ...followUpSignals].sort(
+        (a, b) => a.days - b.days || b.priority - a.priority,
+      )[0]
+      return signal ? [{ person, ...signal }] : []
     })
-    .sort((a, b) => b.status.priority - a.status.priority)
+    .sort((a, b) => a.days - b.days || b.priority - a.priority)
     .slice(0, 3)
 
   const upcoming = snapshot.importantDates
@@ -353,11 +371,11 @@ export function ArchivePage() {
             coachItems.map((item) => (
               <Link key={item!.person.id} to={`/people/${item!.person.id}`}>
                 <strong>{item!.person.fullName}</strong>
-                <span>{item!.status.reason}</span>
+                <span>{item!.reason}</span>
               </Link>
             ))
           ) : (
-            <p>暂时没有到期的联系计划。</p>
+            <p>这个时间范围内没有重要日期或回访提醒。</p>
           )}
         </div>
         <div className="upcoming-mini">

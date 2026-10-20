@@ -54,6 +54,7 @@ export function createPersonRecord(
     intimacyNote: input.intimacyNote ?? '',
     familySummary: input.familySummary ?? '',
     careerSummary: input.careerSummary ?? '',
+    notes: input.notes ?? '',
     cadenceDays: input.cadenceDays ?? null,
     snoozedUntil: input.snoozedUntil ?? null,
     firstMetOn: input.firstMetOn ?? null,

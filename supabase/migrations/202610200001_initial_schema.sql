@@ -16,6 +16,7 @@ create table if not exists public.people (
   intimacy_note text not null default '',
   family_summary text not null default '',
   career_summary text not null default '',
+  notes text not null default '',
   cadence_days integer check (cadence_days is null or cadence_days > 0),
   snoozed_until date,
   first_met_on date,
@@ -212,6 +213,7 @@ as $$
         'intimacyNote', p.intimacy_note,
         'familySummary', p.family_summary,
         'careerSummary', p.career_summary,
+        'notes', p.notes,
         'cadenceDays', p.cadence_days,
         'snoozedUntil', p.snoozed_until,
         'firstMetOn', p.first_met_on,
@@ -370,7 +372,7 @@ begin
   insert into public.people (
     id, user_id, kind, full_name, tier, role, occupation, region, industry,
     influence, intimacy, influence_note, intimacy_note, family_summary,
-    career_summary, cadence_days, snoozed_until, first_met_on, first_met_place,
+    career_summary, notes, cadence_days, snoozed_until, first_met_on, first_met_place,
     first_met_story, avatar_url, deleted_at, created_at, updated_at
   )
   select
@@ -380,6 +382,7 @@ begin
     nullif(p->>'influence', ''), nullif(p->>'intimacy', ''),
     coalesce(p->>'influenceNote', ''), coalesce(p->>'intimacyNote', ''),
     coalesce(p->>'familySummary', ''), coalesce(p->>'careerSummary', ''),
+    coalesce(p->>'notes', ''),
     nullif(p->>'cadenceDays', '')::integer, nullif(p->>'snoozedUntil', '')::date,
     nullif(p->>'firstMetOn', '')::date, coalesce(p->>'firstMetPlace', ''),
     coalesce(p->>'firstMetStory', ''), p->>'avatarUrl',

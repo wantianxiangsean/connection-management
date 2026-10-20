@@ -23,6 +23,7 @@ export const personInputSchema = z
     influence: influenceSchema.nullable().default(null),
     intimacy: intimacySchema.nullable().default(null),
     cadenceDays: z.number().int().positive().nullable().default(null),
+    notes: z.string().trim().default(''),
   })
   .refine((value) => (value.kind === 'contact' ? value.tier !== null : value.tier === null), {
     message: '正式联系人必须选择关系层级，引用人物不设置层级',

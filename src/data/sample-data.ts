@@ -21,6 +21,7 @@ function person(
     intimacyNote: '',
     familySummary: '',
     careerSummary: '',
+    notes: '',
     cadenceDays: null,
     snoozedUntil: null,
     firstMetOn: null,

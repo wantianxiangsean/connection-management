@@ -269,12 +269,16 @@ describe('archive application flow', () => {
     const coach = screen.getByRole('region', { name: '关系教练' })
 
     expect(within(coach).getByText('今天可以想起谁')).toBeInTheDocument()
-    expect(within(coach).queryByText('陈望川')).not.toBeInTheDocument()
+    expect(within(coach).queryByText('沈禾')).not.toBeInTheDocument()
+    expect(
+      within(coach).getByText('这个时间范围内没有重要日期或回访提醒。'),
+    ).toBeInTheDocument()
     await user.click(within(coach).getByRole('button', { name: '未来7天' }))
     expect(within(coach).getByText('未来7天可以想起谁')).toBeInTheDocument()
     expect(within(coach).getByText('陈望川')).toBeInTheDocument()
     await user.click(within(coach).getByRole('button', { name: '未来30天' }))
     expect(within(coach).getByText('未来30天可以想起谁')).toBeInTheDocument()
+    expect(within(coach).getByText('林知秋')).toBeInTheDocument()
   })
 
   it('shows pinyin surname letter hints for a relationship table', async () => {
@@ -346,5 +350,97 @@ describe('archive application flow', () => {
     await user.click(within(dialog).getByRole('button', { name: '保存互动' }))
 
     expect(await screen.findByRole('link', { name: /见面合影/ })).toBeInTheDocument()
+  })
+
+  it('places a labelled edit button at the top right of the profile page', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    const editButton = screen.getByRole('button', {
+      name: '编辑基本资料',
+    })
+    expect(editButton).toHaveTextContent('编辑基本资料')
+    expect(editButton.closest('aside')).toBeNull()
+  })
+
+  it('replaces the profile attachment section with editable notes', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    expect(screen.getByRole('heading', { name: '备注' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: '附件' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('上传附件')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '编辑备注' }))
+    const dialog = screen.getByRole('dialog', { name: '编辑备注' })
+    await user.type(
+      within(dialog).getByLabelText('备注内容'),
+      '下次见面带一本她提过的书。',
+    )
+    await user.click(within(dialog).getByRole('button', { name: '保存备注' }))
+
+    expect(
+      await screen.findByText('下次见面带一本她提过的书。'),
+    ).toBeInTheDocument()
+  })
+
+  it('does not expose avatar management on the profile card', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    expect(screen.queryByText('更换头像')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('img', { name: '林知秋的头像' }),
+    ).not.toBeInTheDocument()
   })
 })

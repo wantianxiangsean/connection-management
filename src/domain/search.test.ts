@@ -18,6 +18,7 @@ const bundle = {
     intimacyNote: '',
     familySummary: '有一个女儿',
     careerSummary: '',
+    notes: '',
     cadenceDays: null,
     snoozedUntil: null,
     firstMetOn: null,

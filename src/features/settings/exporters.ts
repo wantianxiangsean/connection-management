@@ -20,6 +20,7 @@ export function workspaceToCsv(snapshot: DatabaseSnapshot) {
         行业: person.industry,
         影响力: person.influence ? influenceLabels[person.influence] : '',
         亲密度: person.intimacy ? intimacyLabels[person.intimacy] : '',
+        备注: person.notes,
         联系周期天数: person.cadenceDays ? String(person.cadenceDays) : '',
       }
       for (const field of fields) {

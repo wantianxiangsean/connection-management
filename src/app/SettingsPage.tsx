@@ -108,6 +108,7 @@ export function SettingsPage() {
                     occupation: values['职业'] || person.occupation,
                     region: values['地区'] || person.region,
                     industry: values['行业'] || person.industry,
+                    notes: values['备注'] || person.notes,
                     influence: influence ?? person.influence,
                     intimacy: intimacy ?? person.intimacy,
                     updatedAt: new Date().toISOString(),
@@ -128,6 +129,7 @@ export function SettingsPage() {
             occupation: values['职业'] ?? '',
             region: values['地区'] ?? '',
             industry: values['行业'] ?? '',
+            notes: values['备注'] ?? '',
             influence,
             intimacy,
             cadenceDays: values['联系周期天数']

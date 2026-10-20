@@ -935,3 +935,45 @@ export function CustomValuesDialog({
     </DialogFrame>
   )
 }
+
+export function NotesDialog({
+  initial,
+  onClose,
+  onSave,
+}: {
+  initial: string
+  onClose: () => void
+  onSave: (notes: string) => void
+}) {
+  const [notes, setNotes] = useState(initial)
+
+  return (
+    <DialogFrame title="编辑备注" onClose={onClose}>
+      <form
+        className="stack-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSave(notes.trim())
+        }}
+      >
+        <label>
+          <span>备注内容</span>
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={9}
+            placeholder="写下暂时不适合归入其他区块的补充信息"
+          />
+        </label>
+        <footer>
+          <button type="button" className="button ghost" onClick={onClose}>
+            取消
+          </button>
+          <button type="submit" className="button primary">
+            保存备注
+          </button>
+        </footer>
+      </form>
+    </DialogFrame>
+  )
+}

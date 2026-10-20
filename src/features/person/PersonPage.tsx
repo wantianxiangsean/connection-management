@@ -6,16 +6,13 @@ import {
   FileText,
   Glasses,
   HeartHandshake,
-  ImagePlus,
   MessageCircleMore,
-  Paperclip,
   Pencil,
-  Plus,
   Target,
   Users,
   X,
 } from 'lucide-react'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { addDays, format } from 'date-fns'
 import {
@@ -43,11 +40,9 @@ import {
   GoalDialog,
   ImportantDateDialog,
   InteractionDialog,
+  NotesDialog,
 } from './ProfileDialogs'
-import {
-  ResolvedAttachmentLink,
-  ResolvedImage,
-} from '../../components/ResolvedAsset'
+import { ResolvedAttachmentLink } from '../../components/ResolvedAsset'
 
 type DialogName =
   | 'basic'
@@ -59,16 +54,14 @@ type DialogName =
   | 'date'
   | 'interaction'
   | 'custom'
+  | 'notes'
   | null
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 export function PersonPage() {
   const { personId = '' } = useParams()
   const { snapshot, update, repository } = useWorkspace()
   const [dialog, setDialog] = useState<DialogName>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
   const bundle = getPersonBundle(snapshot, personId)
 
   if (!bundle) {
@@ -101,9 +94,6 @@ export function PersonPage() {
       getUpcomingDates([date], today, 30).map((item) => ({ ...item, date })),
     )
     .slice(0, 3)
-  const libraryAttachments = bundle.attachments.filter(
-    (attachment) => !attachment.interactionId,
-  )
 
   function updatePerson(patch: Partial<typeof person>) {
     update((current) => ({
@@ -127,52 +117,26 @@ export function PersonPage() {
     setEditingId(null)
   }
 
-  async function handleAvatar(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    if (file.size > MAX_FILE_SIZE) {
-      setUploadError('头像不能超过 10 MB。')
-      return
-    }
-    setUploadError(null)
-    try {
-      const uploaded = await repository.uploadAttachment(file, person.id)
-      updatePerson({ avatarUrl: uploaded.storagePath })
-    } catch (cause) {
-      setUploadError(cause instanceof Error ? cause.message : '头像上传失败')
-    }
-  }
-
-  async function handleAttachment(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    if (file.size > MAX_FILE_SIZE) {
-      setUploadError('附件不能超过 10 MB。')
-      return
-    }
-    setUploadError(null)
-    try {
-      const uploaded = await repository.uploadAttachment(file, person.id)
-      update((current) => ({
-        ...current,
-        attachments: [...current.attachments, uploaded],
-      }))
-    } catch (cause) {
-      setUploadError(cause instanceof Error ? cause.message : '附件上传失败')
-    }
-  }
-
   return (
     <main className="person-page" aria-label={`${person.fullName}的全息档案`}>
-      <Link
-        to={person.tier ? `/?tier=${person.tier}` : '/'}
-        className="back-link"
-      >
-        <ArrowLeft size={17} />
-        返回155人脉管理
-      </Link>
+      <header className="person-topbar">
+        <Link
+          to={person.tier ? `/?tier=${person.tier}` : '/'}
+          className="back-link"
+        >
+          <ArrowLeft size={17} />
+          返回155人脉管理
+        </Link>
+        <button
+          type="button"
+          className="button person-edit-button"
+          aria-label="编辑基本资料"
+          onClick={() => openDialog('basic')}
+        >
+          <Pencil size={16} />
+          编辑基本资料
+        </button>
+      </header>
 
       <div className="person-layout">
         <aside className={`identity-card tier-${person.tier ?? 'reference'}`}>
@@ -181,37 +145,9 @@ export function PersonPage() {
             <span className="tier-seal">
               {person.tier ? tierLabels[person.tier] : '引用'}
             </span>
-            <button
-              type="button"
-              className="icon-button light"
-              aria-label="编辑基本资料"
-              onClick={() => openDialog('basic')}
-            >
-              <Pencil size={16} />
-            </button>
           </div>
-          <div className="portrait">
-            {person.avatarUrl ? (
-              <ResolvedImage
-                path={person.avatarUrl}
-                alt={`${person.fullName}的头像`}
-                repository={repository}
-              />
-            ) : (
-              <span>{person.fullName.slice(0, 1)}</span>
-            )}
-          </div>
-          <label className="avatar-upload">
-            <ImagePlus size={14} />
-            更换头像
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleAvatar}
-            />
-          </label>
-          <p className="identity-role">{person.role || '还没写下角色'}</p>
           <h1>{person.fullName}</h1>
+          <p className="identity-role">{person.role || '还没写下角色'}</p>
           <p className="identity-occupation">
             {person.occupation || '职业未记录'}
             {person.region ? ` · ${person.region}` : ''}
@@ -689,38 +625,21 @@ export function PersonPage() {
 
           <section className="dossier-section">
             <SectionHeading
-              icon={<Paperclip size={19} />}
-              title="附件"
+              icon={<FileText size={19} />}
+              title="备注"
               actions={
-                <label className="file-action">
-                  <Plus size={14} />
-                  上传附件
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx,.xls,.xlsx"
-                    onChange={handleAttachment}
-                  />
-                </label>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('notes')}
+                >
+                  编辑备注
+                </button>
               }
             />
-            {libraryAttachments.length ? (
-              <div className="attachment-grid">
-                {libraryAttachments.map((attachment) => (
-                  <ResolvedAttachmentLink
-                    key={attachment.id}
-                    attachment={attachment}
-                    repository={repository}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="empty-copy">还没有附件。</p>
-            )}
-            {uploadError ? (
-              <p className="form-error" role="alert">
-                {uploadError}
-              </p>
-            ) : null}
+            <p className="section-copy notes-copy">
+              {person.notes || '还没有备注。'}
+            </p>
           </section>
         </div>
       </div>
@@ -1010,6 +929,15 @@ export function PersonPage() {
               ],
             }))
             closeDialog()
+          }}
+        />
+      ) : null}
+      {dialog === 'notes' ? (
+        <NotesDialog
+          initial={person.notes}
+          onClose={closeDialog}
+          onSave={(notes) => {
+            updatePerson({ notes })
           }}
         />
       ) : null}

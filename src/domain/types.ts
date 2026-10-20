@@ -29,6 +29,7 @@ export interface Person {
   intimacyNote: string
   familySummary: string
   careerSummary: string
+  notes: string
   cadenceDays: number | null
   snoozedUntil: string | null
   firstMetOn: string | null
