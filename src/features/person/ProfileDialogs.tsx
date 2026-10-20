@@ -197,15 +197,20 @@ export function DetailDialog({
     content: string
     observedOn: string
     followUpOn: string | null
-  }) => void
+  }, interactions: Array<{
+    occurredOn: string
+    summary: string
+  }>) => void
   onDelete?: () => void
 }) {
-  const [category, setCategory] = useState(initial?.category ?? '近况')
+  const [category, setCategory] = useState(initial?.category ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
   const [observedOn, setObservedOn] = useState(
     initial?.observedOn ?? todayValue(),
   )
-  const [followUpOn, setFollowUpOn] = useState(initial?.followUpOn ?? '')
+  const [pendingInteractions, setPendingInteractions] = useState([
+    { occurredOn: todayValue(), summary: '' },
+  ])
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -215,8 +220,8 @@ export function DetailDialog({
       category: category.trim(),
       content: content.trim(),
       observedOn,
-      followUpOn: followUpOn || null,
-    })
+      followUpOn: initial?.followUpOn ?? null,
+    }, pendingInteractions.filter((item) => item.summary.trim()))
   }
 
   return (
@@ -227,16 +232,9 @@ export function DetailDialog({
           <input
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            list="detail-category-hints"
+            placeholder="孩子兴趣、早餐搭配、喜欢的app、朋友圈担忧、某次开心的体验、身体情况、心事儿"
             required
           />
-          <datalist id="detail-category-hints">
-            {['近况', '家庭', '饮食', 'App', '担忧', '开心体验', '身体情况', '心事'].map(
-              (item) => (
-                <option key={item} value={item} />
-              ),
-            )}
-          </datalist>
         </label>
         <label>
           <span>内容</span>
@@ -248,25 +246,81 @@ export function DetailDialog({
             required
           />
         </label>
-        <div className="form-grid">
-          <label>
-            <span>发生日期</span>
-            <input
-              type="date"
-              value={observedOn}
-              onChange={(event) => setObservedOn(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            <span>回访日期</span>
-            <input
-              type="date"
-              value={followUpOn}
-              onChange={(event) => setFollowUpOn(event.target.value)}
-            />
-          </label>
-        </div>
+        <label>
+          <span>发生日期</span>
+          <input
+            type="date"
+            value={observedOn}
+            onChange={(event) => setObservedOn(event.target.value)}
+            required
+          />
+        </label>
+        <fieldset className="interaction-drafts">
+          <legend>互动记录（可多条）</legend>
+          {pendingInteractions.map((interaction, index) => (
+            <div className="interaction-draft" key={index}>
+              <label>
+                <span>互动日期</span>
+                <input
+                  type="date"
+                  value={interaction.occurredOn}
+                  onChange={(event) =>
+                    setPendingInteractions((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, occurredOn: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                />
+              </label>
+              <label>
+                <span>互动内容</span>
+                <textarea
+                  value={interaction.summary}
+                  onChange={(event) =>
+                    setPendingInteractions((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, summary: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                  rows={3}
+                  placeholder="这次见面、通话或聊天聊了什么"
+                />
+              </label>
+              {pendingInteractions.length > 1 ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  aria-label={`移除第${index + 1}条互动`}
+                  onClick={() =>
+                    setPendingInteractions((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                >
+                  移除
+                </button>
+              ) : null}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="button ghost add-interaction-button"
+            onClick={() =>
+              setPendingInteractions((current) => [
+                ...current,
+                { occurredOn: todayValue(), summary: '' },
+              ])
+            }
+          >
+            新增一条互动
+          </button>
+        </fieldset>
         <footer>
           {initial && onDelete ? (
             <button type="button" className="danger-text-button" onClick={onDelete}>
@@ -468,7 +522,7 @@ export function CareerDialog({
       >
         <div className="form-grid">
           <label>
-            <span>机构</span>
+            <span>公司</span>
             <input value={organization} onChange={(event) => setOrganization(event.target.value)} />
           </label>
           <label>

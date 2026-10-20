@@ -60,13 +60,7 @@ export function PersonDialog({
 
   if (!open) return null
 
-  const qualifiesForFriendDefault =
-    values.influence !== null &&
-    values.influence !== 'weak' &&
-    values.intimacy !== null &&
-    values.intimacy !== 'distant'
-  const effectiveTier =
-    manualTier ?? (qualifiesForFriendDefault ? 'friend' : initialTier)
+  const effectiveTier = manualTier ?? initialTier
 
   function persist(keepOpen: boolean) {
     if (!values.fullName.trim()) return
@@ -273,9 +267,6 @@ export function PersonDialog({
               />
             </label>
           </div>
-          <p className="field-help">
-            影响力不为弱且亲密度不为疏时，关系层级会默认切换到“好友”；你仍可手动调整。
-          </p>
           <label>
             <span>家庭概况</span>
             <textarea

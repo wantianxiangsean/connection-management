@@ -443,4 +443,81 @@ describe('archive application flow', () => {
       screen.queryByRole('img', { name: '林知秋的头像' }),
     ).not.toBeInTheDocument()
   })
+
+  it('uses manual detail-category input with example placeholder text', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    await user.click(screen.getByRole('button', { name: '添加细节' }))
+
+    const dialog = screen.getByRole('dialog', { name: '添加细节' })
+    expect(
+      within(dialog).getByPlaceholderText(
+        '孩子兴趣、早餐搭配、喜欢的app、朋友圈担忧、某次开心的体验、身体情况、心事儿',
+      ),
+    ).toHaveValue('')
+  })
+
+  it('records multiple dated interaction entries from the detail dialog', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    await user.click(screen.getByRole('button', { name: '添加细节' }))
+
+    const dialog = screen.getByRole('dialog', { name: '添加细节' })
+    expect(within(dialog).queryByLabelText('回访日期')).not.toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText('类别'), '近况')
+    await user.type(within(dialog).getByLabelText('内容'), '记住这次聊天的细节')
+    const interactionContents = within(dialog).getAllByLabelText('互动内容')
+    await user.type(interactionContents[0], '第一次互动内容')
+    await user.click(
+      within(dialog).getByRole('button', { name: '新增一条互动' }),
+    )
+    const nextInteractionContents = within(dialog).getAllByLabelText('互动内容')
+    expect(nextInteractionContents).toHaveLength(2)
+    await user.type(nextInteractionContents[1], '第二次互动内容')
+    await user.click(
+      within(dialog).getByRole('button', { name: '保存细节' }),
+    )
+
+    const interactionSection = screen
+      .getByRole('heading', { name: '互动记录' })
+      .closest('section')!
+    expect(
+      within(interactionSection).getByText('第一次互动内容'),
+    ).toBeInTheDocument()
+    expect(
+      within(interactionSection).getByText('第二次互动内容'),
+    ).toBeInTheDocument()
+  })
 })

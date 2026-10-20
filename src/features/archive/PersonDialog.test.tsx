@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PersonDialog } from './PersonDialog'
 
 describe('new person defaults', () => {
-  it('defaults to friend when influence is not weak and intimacy is not distant', async () => {
+  it('does not change the selected tier based on influence or intimacy', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(
@@ -17,23 +17,23 @@ describe('new person defaults', () => {
     )
 
     await user.type(screen.getByLabelText('姓名'), '韩知')
-    await user.selectOptions(screen.getByLabelText('影响力'), 'medium')
-    await user.selectOptions(screen.getByLabelText('亲密度'), 'medium')
+    await user.selectOptions(screen.getByLabelText('影响力'), 'strong')
+    await user.selectOptions(screen.getByLabelText('亲密度'), 'close')
 
-    expect(screen.getByRole('radio', { name: '好友' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '命友' })).toBeChecked()
     await user.click(screen.getByRole('button', { name: '保存' }))
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         fullName: '韩知',
-        tier: 'friend',
-        influence: 'medium',
-        intimacy: 'medium',
+        tier: 'soul',
+        influence: 'strong',
+        intimacy: 'close',
       }),
       false,
     )
   })
 
-  it('lets the owner override the suggested friend tier', async () => {
+  it('lets the owner choose a tier independently of the ratings', async () => {
     const user = userEvent.setup()
     render(
       <PersonDialog

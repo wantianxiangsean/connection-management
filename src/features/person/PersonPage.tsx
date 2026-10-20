@@ -671,7 +671,7 @@ export function PersonPage() {
               : undefined
           }
           onClose={closeDialog}
-          onSave={(value) => {
+          onSave={(value, interactions) => {
             const timestamp = new Date().toISOString()
             update((current) => ({
               ...current,
@@ -690,6 +690,16 @@ export function PersonPage() {
                       updatedAt: timestamp,
                     },
                   ],
+              interactions: [
+                ...current.interactions,
+                ...interactions.map((interaction) => ({
+                  id: `interaction-${crypto.randomUUID()}`,
+                  personId: person.id,
+                  occurredOn: interaction.occurredOn,
+                  channel: 'meeting' as const,
+                  summary: interaction.summary,
+                })),
+              ],
             }))
             closeDialog()
           }}
