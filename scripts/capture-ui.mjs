@@ -24,6 +24,12 @@ await desktop.screenshot({
   path: 'artifacts/archive-desktop.png',
   fullPage: true,
 })
+await desktop.getByRole('button', { name: '新增人物' }).click()
+await desktop.screenshot({
+  path: 'artifacts/new-person-desktop.png',
+  fullPage: true,
+})
+await desktop.getByRole('button', { name: '关闭' }).click()
 await desktop.getByRole('link', { name: '林知秋' }).click()
 await desktop.getByRole('main', { name: '林知秋的全息档案' }).waitFor()
 await desktop.screenshot({

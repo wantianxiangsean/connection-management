@@ -2,6 +2,8 @@ import { X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import {
   tierLabels,
+  type Influence,
+  type Intimacy,
   type RelationshipTier,
 } from '../../domain/types'
 
@@ -12,7 +14,19 @@ interface PersonInput {
   occupation: string
   region: string
   industry: string
+  influence: Influence | null
+  intimacy: Intimacy | null
+  influenceNote: string
+  intimacyNote: string
+  cadenceDays: number | null
+  familySummary: string
+  careerSummary: string
+  firstMetOn: string | null
+  firstMetPlace: string
+  firstMetStory: string
 }
+
+type PersonDraft = Omit<PersonInput, 'tier'>
 
 export function PersonDialog({
   open,
@@ -25,29 +39,57 @@ export function PersonDialog({
   onClose: () => void
   onSubmit: (input: PersonInput) => void
 }) {
-  const [values, setValues] = useState<PersonInput>({
+  const [values, setValues] = useState<PersonDraft>({
     fullName: '',
-    tier: initialTier,
     role: '',
     occupation: '',
     region: '',
     industry: '',
+    influence: null,
+    intimacy: null,
+    influenceNote: '',
+    intimacyNote: '',
+    cadenceDays: null,
+    familySummary: '',
+    careerSummary: '',
+    firstMetOn: null,
+    firstMetPlace: '',
+    firstMetStory: '',
   })
+  const [manualTier, setManualTier] = useState<RelationshipTier | null>(null)
 
   if (!open) return null
+
+  const qualifiesForFriendDefault =
+    values.influence !== null &&
+    values.influence !== 'weak' &&
+    values.intimacy !== null &&
+    values.intimacy !== 'distant'
+  const effectiveTier =
+    manualTier ?? (qualifiesForFriendDefault ? 'friend' : initialTier)
 
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!values.fullName.trim()) return
-    onSubmit(values)
+    onSubmit({ ...values, tier: effectiveTier })
     setValues({
       fullName: '',
-      tier: initialTier,
       role: '',
       occupation: '',
       region: '',
       industry: '',
+      influence: null,
+      intimacy: null,
+      influenceNote: '',
+      intimacyNote: '',
+      cadenceDays: null,
+      familySummary: '',
+      careerSummary: '',
+      firstMetOn: null,
+      firstMetPlace: '',
+      firstMetStory: '',
     })
+    setManualTier(null)
   }
 
   return (
@@ -88,8 +130,8 @@ export function PersonDialog({
                   <input
                     type="radio"
                     name="tier"
-                    checked={values.tier === tier}
-                    onChange={() => setValues((current) => ({ ...current, tier }))}
+                    checked={effectiveTier === tier}
+                    onChange={() => setManualTier(tier)}
                   />
                   <span>{tierLabels[tier]}</span>
                 </label>
@@ -143,7 +185,163 @@ export function PersonDialog({
                 placeholder="科技"
               />
             </label>
+            <label>
+              <span>影响力</span>
+              <select
+                value={values.influence ?? ''}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    influence:
+                      event.target.value === ''
+                        ? null
+                        : (event.target.value as Influence),
+                  }))
+                }
+              >
+                <option value="">未设置</option>
+                <option value="weak">弱</option>
+                <option value="medium">中</option>
+                <option value="strong">强</option>
+              </select>
+            </label>
+            <label>
+              <span>亲密度</span>
+              <select
+                value={values.intimacy ?? ''}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    intimacy:
+                      event.target.value === ''
+                        ? null
+                        : (event.target.value as Intimacy),
+                  }))
+                }
+              >
+                <option value="">未设置</option>
+                <option value="distant">疏</option>
+                <option value="medium">中</option>
+                <option value="close">密</option>
+              </select>
+            </label>
+            <label>
+              <span>影响力备注</span>
+              <input
+                value={values.influenceNote}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    influenceNote: event.target.value,
+                  }))
+                }
+                placeholder="为什么这样判断"
+              />
+            </label>
+            <label>
+              <span>亲密度备注</span>
+              <input
+                value={values.intimacyNote}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    intimacyNote: event.target.value,
+                  }))
+                }
+                placeholder="相处的真实感受"
+              />
+            </label>
+            <label>
+              <span>联系周期（天）</span>
+              <input
+                type="number"
+                min="1"
+                value={values.cadenceDays ?? ''}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    cadenceDays: event.target.value
+                      ? Number(event.target.value)
+                      : null,
+                  }))
+                }
+                placeholder="留空则不设节奏"
+              />
+            </label>
           </div>
+          <p className="field-help">
+            影响力不为弱且亲密度不为疏时，关系层级会默认切换到“好友”；你仍可手动调整。
+          </p>
+          <label>
+            <span>家庭概况</span>
+            <textarea
+              value={values.familySummary}
+              onChange={(event) =>
+                setValues((current) => ({
+                  ...current,
+                  familySummary: event.target.value,
+                }))
+              }
+              placeholder="家庭成员、居住情况或最近近况"
+              rows={3}
+            />
+          </label>
+          <label>
+            <span>职业概况</span>
+            <textarea
+              value={values.careerSummary}
+              onChange={(event) =>
+                setValues((current) => ({
+                  ...current,
+                  careerSummary: event.target.value,
+                }))
+              }
+              placeholder="当前工作、事业方向或转型计划"
+              rows={3}
+            />
+          </label>
+          <div className="form-grid">
+            <label>
+              <span>第一次见面日期</span>
+              <input
+                type="date"
+                value={values.firstMetOn ?? ''}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    firstMetOn: event.target.value || null,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              <span>第一次见面地点</span>
+              <input
+                value={values.firstMetPlace}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    firstMetPlace: event.target.value,
+                  }))
+                }
+                placeholder="在哪里认识"
+              />
+            </label>
+          </div>
+          <label>
+            <span>第一次见面的故事</span>
+            <textarea
+              value={values.firstMetStory}
+              onChange={(event) =>
+                setValues((current) => ({
+                  ...current,
+                  firstMetStory: event.target.value,
+                }))
+              }
+              placeholder="当时是怎么认识、聊了什么"
+              rows={3}
+            />
+          </label>
           <footer>
             <button type="button" className="button ghost" onClick={onClose}>
               取消

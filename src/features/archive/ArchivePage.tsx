@@ -390,6 +390,16 @@ export function ArchivePage() {
             occupation: input.occupation,
             region: input.region,
             industry: input.industry,
+            influence: input.influence,
+            intimacy: input.intimacy,
+            influenceNote: input.influenceNote,
+            intimacyNote: input.intimacyNote,
+            cadenceDays: input.cadenceDays,
+            familySummary: input.familySummary,
+            careerSummary: input.careerSummary,
+            firstMetOn: input.firstMetOn,
+            firstMetPlace: input.firstMetPlace,
+            firstMetStory: input.firstMetStory,
           })
           update((current) => ({
             ...current,
