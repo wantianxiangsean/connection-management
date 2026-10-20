@@ -111,6 +111,7 @@ export interface Attachment {
   id: string
   personId: string
   detailEntryId: string | null
+  interactionId?: string | null
   fileName: string
   mimeType: string
   size: number

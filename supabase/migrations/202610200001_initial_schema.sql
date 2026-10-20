@@ -113,6 +113,7 @@ create table if not exists public.attachments (
   user_id uuid not null references auth.users(id) on delete cascade,
   person_id text not null references public.people(id) on delete cascade,
   detail_entry_id text references public.detail_entries(id) on delete set null,
+  interaction_id text references public.interactions(id) on delete set null,
   file_name text not null,
   mime_type text not null,
   size bigint not null check (size between 0 and 10485760),
@@ -309,6 +310,7 @@ as $$
         'id', a.id,
         'personId', a.person_id,
         'detailEntryId', a.detail_entry_id,
+        'interactionId', a.interaction_id,
         'fileName', a.file_name,
         'mimeType', a.mime_type,
         'size', a.size,
@@ -437,10 +439,11 @@ begin
   from jsonb_array_elements(coalesce(workspace->'detailEntries', '[]'::jsonb)) d;
 
   insert into public.attachments (
-    id, user_id, person_id, detail_entry_id, file_name, mime_type, size,
+    id, user_id, person_id, detail_entry_id, interaction_id, file_name, mime_type, size,
     storage_path, created_at
   )
   select a->>'id', owner_id, a->>'personId', nullif(a->>'detailEntryId', ''),
+    nullif(a->>'interactionId', ''),
     a->>'fileName', a->>'mimeType', (a->>'size')::bigint, a->>'storagePath',
     coalesce(nullif(a->>'createdAt', '')::timestamptz, now())
   from jsonb_array_elements(coalesce(workspace->'attachments', '[]'::jsonb)) a;

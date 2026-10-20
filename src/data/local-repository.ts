@@ -67,12 +67,14 @@ export class LocalRepository implements WorkspaceRepository {
     file: File,
     personId: string,
     detailEntryId?: string | null,
+    interactionId?: string | null,
   ): Promise<Attachment> {
     const dataUrl = await fileToDataUrl(file)
     return {
       id: `attachment-${crypto.randomUUID()}`,
       personId,
       detailEntryId: detailEntryId ?? null,
+      interactionId: interactionId ?? null,
       fileName: file.name,
       mimeType: file.type,
       size: file.size,

@@ -28,15 +28,46 @@ describe('archive application flow', () => {
     await user.type(screen.getByPlaceholderText('leeds'), 'preview')
     await user.click(screen.getByRole('button', { name: '登录' }))
 
-    expect(await screen.findByRole('heading', { name: '人脉归档' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '155人脉管理' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('你的私人关系档案')).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '我想要做什么？我为谁而做？他们需要什么？因为我，他们有什么改变？',
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /命友/ })).toHaveAttribute(
       'aria-selected',
       'true',
     )
+    expect(
+      screen.queryByRole('columnheader', { name: '认识渠道' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: '最自在的相处方式' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /密友/ }))
+    expect(
+      screen.queryByRole('columnheader', { name: '认识渠道' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: '最自在的相处方式' }),
+    ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /认识的人/ }))
     expect(screen.getByText('顾晓风')).toBeInTheDocument()
-    expect(screen.queryByText('品牌策略顾问')).not.toBeInTheDocument()
+    expect(screen.getByText('行业活动认识')).toBeInTheDocument()
+    expect(screen.getByText('品牌策略顾问')).toBeInTheDocument()
+    const acquaintanceList = screen.getByRole('list', {
+      name: '认识的人名单',
+    })
+    expect(
+      within(acquaintanceList)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('aria-label')),
+    ).toEqual(['顾晓风', '许南'])
 
     await user.click(screen.getByRole('button', { name: '显示更多资料' }))
     expect(screen.getByText('品牌策略顾问')).toBeInTheDocument()
@@ -59,7 +90,7 @@ describe('archive application flow', () => {
     await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
     await user.type(screen.getByPlaceholderText('leeds'), 'preview')
     await user.click(screen.getByRole('button', { name: '登录' }))
-    await screen.findByRole('heading', { name: '人脉归档' })
+    await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.type(
       screen.getByPlaceholderText('搜索姓名、职业或某个细节'),
@@ -90,7 +121,7 @@ describe('archive application flow', () => {
     await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
     await user.type(screen.getByPlaceholderText('leeds'), 'preview')
     await user.click(screen.getByRole('button', { name: '登录' }))
-    await screen.findByRole('heading', { name: '人脉归档' })
+    await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
     await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
@@ -123,5 +154,197 @@ describe('archive application flow', () => {
       within(connectionDialog).getByRole('button', { name: '建立连接' }),
     )
     expect(await screen.findByRole('link', { name: '沈禾' })).toBeInTheDocument()
+  })
+
+  it('puts interactions first and manages family and dates separately', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent)
+    expect(headings.slice(0, 4)).toEqual([
+      '互动记录',
+      '关系速写',
+      '家庭',
+      '重要日期',
+    ])
+    expect(
+      screen.queryByRole('heading', { name: '家庭与重要日期' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('removes a mutual connection from either side of the relationship', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    await user.click(
+      screen.getByRole('button', {
+        name: '删除与陈望川的共同认识关系',
+      }),
+    )
+
+    expect(
+      screen.queryByRole('link', { name: '陈望川' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('returns to the relationship tier the person was opened from', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('tab', { name: /好友/ }))
+    await user.click(screen.getByRole('link', { name: '周原' }))
+    await user.click(screen.getByRole('link', { name: '返回155人脉管理' }))
+
+    expect(
+      await screen.findByRole('tab', { name: /好友/ }),
+    ).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('filters relationship coaching by today, this week and this month', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    const coach = screen.getByRole('region', { name: '关系教练' })
+
+    expect(within(coach).getByText('今天可以想起谁')).toBeInTheDocument()
+    expect(within(coach).queryByText('陈望川')).not.toBeInTheDocument()
+    await user.click(within(coach).getByRole('button', { name: '未来7天' }))
+    expect(within(coach).getByText('未来7天可以想起谁')).toBeInTheDocument()
+    expect(within(coach).getByText('陈望川')).toBeInTheDocument()
+    await user.click(within(coach).getByRole('button', { name: '未来30天' }))
+    expect(within(coach).getByText('未来30天可以想起谁')).toBeInTheDocument()
+  })
+
+  it('shows pinyin surname letter hints for a relationship table', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('tab', { name: /好友/ }))
+
+    const table = screen.getByRole('table')
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(['S', 'Z'])
+  })
+
+  it('adds an attachment while recording an interaction', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
+    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    const interactionHeading = screen.getByRole('heading', {
+      name: '互动记录',
+    })
+    const interactionSection = interactionHeading.closest('section')!
+    await user.click(
+      within(interactionSection).getByRole('button', {
+        name: '记录互动',
+      }),
+    )
+    const dialog = screen.getByRole('dialog', { name: '记录互动' })
+    await user.upload(
+      within(dialog).getByLabelText('添加互动附件'),
+      new File(['合影'], '见面合影.txt', { type: 'text/plain' }),
+    )
+    await user.type(
+      within(dialog).getByLabelText('聊了什么'),
+      '一起整理了近期计划。',
+    )
+    await user.click(within(dialog).getByRole('button', { name: '保存互动' }))
+
+    expect(await screen.findByRole('link', { name: /见面合影/ })).toBeInTheDocument()
   })
 })

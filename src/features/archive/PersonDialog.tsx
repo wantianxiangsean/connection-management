@@ -37,7 +37,7 @@ export function PersonDialog({
   open: boolean
   initialTier: RelationshipTier
   onClose: () => void
-  onSubmit: (input: PersonInput) => void
+  onSubmit: (input: PersonInput, keepOpen: boolean) => void
 }) {
   const [values, setValues] = useState<PersonDraft>({
     fullName: '',
@@ -68,10 +68,9 @@ export function PersonDialog({
   const effectiveTier =
     manualTier ?? (qualifiesForFriendDefault ? 'friend' : initialTier)
 
-  function submit(event: FormEvent) {
-    event.preventDefault()
+  function persist(keepOpen: boolean) {
     if (!values.fullName.trim()) return
-    onSubmit({ ...values, tier: effectiveTier })
+    onSubmit({ ...values, tier: effectiveTier }, keepOpen)
     setValues({
       fullName: '',
       role: '',
@@ -90,6 +89,11 @@ export function PersonDialog({
       firstMetStory: '',
     })
     setManualTier(null)
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    persist(false)
   }
 
   return (
@@ -346,8 +350,16 @@ export function PersonDialog({
             <button type="button" className="button ghost" onClick={onClose}>
               取消
             </button>
+            <button
+              type="button"
+              className="button ghost"
+              disabled={!values.fullName.trim()}
+              onClick={() => persist(true)}
+            >
+              保存并新建
+            </button>
             <button type="submit" className="button primary" disabled={!values.fullName.trim()}>
-              建立档案
+              保存
             </button>
           </footer>
         </form>

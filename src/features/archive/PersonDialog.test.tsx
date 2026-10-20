@@ -21,7 +21,7 @@ describe('new person defaults', () => {
     await user.selectOptions(screen.getByLabelText('亲密度'), 'medium')
 
     expect(screen.getByRole('radio', { name: '好友' })).toBeChecked()
-    await user.click(screen.getByRole('button', { name: '建立档案' }))
+    await user.click(screen.getByRole('button', { name: '保存' }))
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         fullName: '韩知',
@@ -29,6 +29,7 @@ describe('new person defaults', () => {
         influence: 'medium',
         intimacy: 'medium',
       }),
+      false,
     )
   })
 
@@ -77,7 +78,7 @@ describe('new person defaults', () => {
     await user.type(screen.getByLabelText('第一次见面日期'), '2026-09-18')
     await user.type(screen.getByLabelText('第一次见面地点'), '北京望京')
     await user.type(screen.getByLabelText('第一次见面的故事'), '朋友组织的小型聚会')
-    await user.click(screen.getByRole('button', { name: '建立档案' }))
+    await user.click(screen.getByRole('button', { name: '保存' }))
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -95,6 +96,29 @@ describe('new person defaults', () => {
         firstMetPlace: '北京望京',
         firstMetStory: '朋友组织的小型聚会',
       }),
+      false,
     )
   }, 10_000)
+
+  it('saves the current person and keeps the form ready for another', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(
+      <PersonDialog
+        open
+        initialTier="friend"
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    await user.type(screen.getByLabelText('姓名'), '韩知')
+    await user.click(screen.getByRole('button', { name: '保存并新建' }))
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ fullName: '韩知', tier: 'friend' }),
+      true,
+    )
+    expect(screen.getByLabelText('姓名')).toHaveValue('')
+  })
 })

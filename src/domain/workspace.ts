@@ -189,6 +189,40 @@ export function addConnection(
   return snapshot
 }
 
+export function removeConnection(
+  source: DatabaseSnapshot,
+  personId: string,
+  relatedPersonId: string,
+) {
+  const snapshot = clone(source)
+  const [personAId, personBId] = [personId, relatedPersonId].sort()
+  snapshot.connections = snapshot.connections.filter(
+    (connection) =>
+      !(
+        (connection.personAId === personAId &&
+          connection.personBId === personBId) ||
+        (connection.personAId === personBId &&
+          connection.personBId === personAId)
+      ),
+  )
+  const relatedPerson = snapshot.people.find(
+    (person) => person.id === relatedPersonId,
+  )
+  const stillReferenced =
+    relatedPerson?.kind !== 'reference' ||
+    snapshot.connections.some(
+      (connection) =>
+        connection.personAId === relatedPersonId ||
+        connection.personBId === relatedPersonId,
+    )
+  if (!stillReferenced) {
+    snapshot.people = snapshot.people.filter(
+      (person) => person.id !== relatedPersonId,
+    )
+  }
+  return snapshot
+}
+
 export function promoteReference(
   source: DatabaseSnapshot,
   personId: string,

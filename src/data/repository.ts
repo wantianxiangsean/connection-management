@@ -19,6 +19,7 @@ export interface WorkspaceRepository {
     file: File,
     personId: string,
     detailEntryId?: string | null,
+    interactionId?: string | null,
   ): Promise<Attachment>
   getAttachmentUrl(path: string): Promise<string>
 }

@@ -128,8 +128,8 @@ export function createSampleSnapshot(): DatabaseSnapshot {
     connections: [
       {
         id: 'connection-1',
-        personAId: 'lin-zhiqiu',
-        personBId: 'chen-wangchuan',
+        personAId: 'chen-wangchuan',
+        personBId: 'lin-zhiqiu',
         note: '一起做过社区项目',
       },
       {

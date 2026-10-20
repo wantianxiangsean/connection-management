@@ -20,7 +20,7 @@ async function signIn() {
   await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
   await user.type(screen.getByPlaceholderText('leeds'), 'preview')
   await user.click(screen.getByRole('button', { name: '登录' }))
-  await screen.findByRole('heading', { name: '人脉归档' })
+  await screen.findByRole('heading', { name: '155人脉管理' })
   return user
 }
 
@@ -66,7 +66,7 @@ describe('settings workflows', () => {
     await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
     const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
     await user.click(
-      within(profileDialog).getByRole('button', { name: '移入回收站' }),
+      within(profileDialog).getByRole('button', { name: '删除联系人' }),
     )
 
     await user.click(screen.getByRole('link', { name: '设置' }))

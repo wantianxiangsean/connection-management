@@ -77,6 +77,7 @@ export class SupabaseRepository implements WorkspaceRepository {
     file: File,
     personId: string,
     detailEntryId?: string | null,
+    interactionId?: string | null,
   ): Promise<Attachment> {
     const { data: userData, error: userError } = await this.client.auth.getUser()
     if (userError || !userData.user) throw userError ?? new Error('登录已失效')
@@ -91,6 +92,7 @@ export class SupabaseRepository implements WorkspaceRepository {
       id: `attachment-${crypto.randomUUID()}`,
       personId,
       detailEntryId: detailEntryId ?? null,
+      interactionId: interactionId ?? null,
       fileName: file.name,
       mimeType: file.type,
       size: file.size,

@@ -9,7 +9,7 @@ test('owner can sign in and review a relationship profile', async ({ page }) => 
   await page.getByPlaceholder('leeds').fill('preview')
   await page.getByRole('button', { name: '登录' }).click()
 
-  await expect(page.getByRole('heading', { name: '人脉归档' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '155人脉管理' })).toBeVisible()
   await page.getByRole('link', { name: '林知秋' }).click()
   await expect(
     page.getByRole('main', { name: '林知秋的全息档案' }),

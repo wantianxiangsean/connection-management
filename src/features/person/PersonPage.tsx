@@ -13,6 +13,7 @@ import {
   Plus,
   Target,
   Users,
+  X,
 } from 'lucide-react'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -27,6 +28,7 @@ import {
   addConnection,
   getPersonBundle,
   promoteReference,
+  removeConnection,
 } from '../../domain/workspace'
 import { getCoachStatus } from '../../domain/coach'
 import { getUpcomingDates } from '../../domain/dates'
@@ -99,6 +101,9 @@ export function PersonPage() {
       getUpcomingDates([date], today, 30).map((item) => ({ ...item, date })),
     )
     .slice(0, 3)
+  const libraryAttachments = bundle.attachments.filter(
+    (attachment) => !attachment.interactionId,
+  )
 
   function updatePerson(patch: Partial<typeof person>) {
     update((current) => ({
@@ -161,9 +166,12 @@ export function PersonPage() {
 
   return (
     <main className="person-page" aria-label={`${person.fullName}的全息档案`}>
-      <Link to="/" className="back-link">
+      <Link
+        to={person.tier ? `/?tier=${person.tier}` : '/'}
+        className="back-link"
+      >
         <ArrowLeft size={17} />
-        返回人脉归档
+        返回155人脉管理
       </Link>
 
       <div className="person-layout">
@@ -268,6 +276,71 @@ export function PersonPage() {
         </aside>
 
         <div className="dossier">
+          <section className="dossier-section interaction-section">
+            <SectionHeading
+              icon={<MessageCircleMore size={19} />}
+              title="互动记录"
+              actions={
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('interaction')}
+                >
+                  记录互动
+                </button>
+              }
+            />
+            {bundle.interactions.length ? (
+              <ul className="item-list interaction-list">
+                {bundle.interactions.map((interaction) => (
+                  <li key={interaction.id}>
+                    <span className="list-initial">
+                      {channelLabels[interaction.channel].slice(0, 1)}
+                    </span>
+                    <div>
+                      <strong>
+                        {interaction.occurredOn} ·{' '}
+                        {channelLabels[interaction.channel]}
+                      </strong>
+                      <p>{interaction.summary}</p>
+                      {bundle.attachments.some(
+                        (attachment) =>
+                          attachment.interactionId === interaction.id,
+                      ) ? (
+                        <div className="interaction-attachments">
+                          {bundle.attachments
+                            .filter(
+                              (attachment) =>
+                                attachment.interactionId === interaction.id,
+                            )
+                            .map((attachment) => (
+                              <ResolvedAttachmentLink
+                                key={attachment.id}
+                                attachment={attachment}
+                                repository={repository}
+                              />
+                            ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="row-edit-button"
+                      aria-label={`编辑互动${interaction.occurredOn}`}
+                      onClick={() => openDialog('interaction', interaction.id)}
+                    >
+                      编辑
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty-copy">
+                还没有互动记录。见完面后，可以在这里快速记一笔。
+              </p>
+            )}
+          </section>
+
           <section className="dossier-section dossier-intro">
             <div>
               <p className="section-overline">见面前，先看这里</p>
@@ -315,92 +388,89 @@ export function PersonPage() {
           <section className="dossier-section">
             <SectionHeading
               icon={<Users size={19} />}
-              title="家庭与重要日期"
+              title="家庭"
               actions={
-                <>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => openDialog('family')}
-                  >
-                    添加家庭成员
-                  </button>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => openDialog('date')}
-                  >
-                    添加重要日期
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('family')}
+                >
+                  添加家庭成员
+                </button>
               }
             />
             {person.familySummary ? (
               <p className="section-copy">{person.familySummary}</p>
             ) : null}
-            <div className="split-lists">
-              <div>
-                <h3>家庭成员</h3>
-                {bundle.familyMembers.length ? (
-                  <ul className="item-list">
-                    {bundle.familyMembers.map((member) => (
-                      <li key={member.id}>
-                        <span className="list-initial">
-                          {member.name.slice(0, 1)}
-                        </span>
-                        <div>
-                          <strong>
-                            {member.name}
-                            {member.relation ? ` · ${member.relation}` : ''}
-                          </strong>
-                          {member.note ? <p>{member.note}</p> : null}
-                        </div>
-                        <button
-                          type="button"
-                          className="row-edit-button"
-                          aria-label={`编辑家庭成员${member.name}`}
-                          onClick={() => openDialog('family', member.id)}
-                        >
-                          编辑
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="empty-copy">还没有记录家庭成员。</p>
-                )}
-              </div>
-              <div>
-                <h3>重要日期</h3>
-                {bundle.importantDates.length ? (
-                  <ul className="date-list">
-                    {bundle.importantDates.map((date) => (
-                      <li key={date.id}>
-                        <CakeSlice size={16} />
-                        <div>
-                          <strong>{date.label}</strong>
-                          <span>
-                            {date.calendarType === 'lunar' ? '农历' : '公历'}{' '}
-                            {date.month}月{date.day}日
-                            {date.repeatAnnually ? ' · 每年' : ''}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="row-edit-button"
-                          aria-label={`编辑重要日期${date.label}`}
-                          onClick={() => openDialog('date', date.id)}
-                        >
-                          编辑
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="empty-copy">还没有重要日期。</p>
-                )}
-              </div>
-            </div>
+            {bundle.familyMembers.length ? (
+              <ul className="item-list">
+                {bundle.familyMembers.map((member) => (
+                  <li key={member.id}>
+                    <span className="list-initial">{member.name.slice(0, 1)}</span>
+                    <div>
+                      <strong>
+                        {member.name}
+                        {member.relation ? ` · ${member.relation}` : ''}
+                      </strong>
+                      {member.note ? <p>{member.note}</p> : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="row-edit-button"
+                      aria-label={`编辑家庭成员${member.name}`}
+                      onClick={() => openDialog('family', member.id)}
+                    >
+                      编辑
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty-copy">还没有记录家庭成员。</p>
+            )}
+          </section>
+
+          <section className="dossier-section">
+            <SectionHeading
+              icon={<CakeSlice size={19} />}
+              title="重要日期"
+              actions={
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('date')}
+                >
+                  添加重要日期
+                </button>
+              }
+            />
+            {bundle.importantDates.length ? (
+              <ul className="date-list date-list-wide">
+                {bundle.importantDates.map((date) => (
+                  <li key={date.id}>
+                    <CakeSlice size={16} />
+                    <div>
+                      <strong>{date.label}</strong>
+                      <span>
+                        {date.calendarType === 'lunar' ? '农历' : '公历'}{' '}
+                        {date.month}月{date.day}日
+                        {date.repeatAnnually ? ' · 每年' : ''}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="row-edit-button"
+                      aria-label={`编辑重要日期${date.label}`}
+                      onClick={() => openDialog('date', date.id)}
+                    >
+                      编辑
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty-copy">还没有重要日期。</p>
+            )}
           </section>
 
           <section className="dossier-section">
@@ -492,17 +562,22 @@ export function PersonPage() {
               }
             />
             <div className="people-chips">
-              {bundle.connections.map((connection) =>
-                connection.kind === 'contact' ? (
-                  <Link key={connection.id} to={`/people/${connection.id}`}>
-                    {connection.fullName}
-                  </Link>
-                ) : (
-                  <span key={connection.id} className="reference-chip">
-                    {connection.fullName}
-                    <small>引用</small>
+              {bundle.connections.map((connection) => (
+                <span key={connection.id} className="connection-chip">
+                  {connection.kind === 'contact' ? (
+                    <Link to={`/people/${connection.id}`}>
+                      {connection.fullName}
+                    </Link>
+                  ) : (
+                    <>
+                      <span>{connection.fullName}</span>
+                      <small>引用</small>
+                    </>
+                  )}
+                  {connection.kind === 'reference' ? (
                     <button
                       type="button"
+                      className="connection-link-button"
                       onClick={() =>
                         update((current) =>
                           promoteReference(current, connection.id, 'friend'),
@@ -511,9 +586,22 @@ export function PersonPage() {
                     >
                       转为联系人
                     </button>
-                  </span>
-                ),
-              )}
+                  ) : null}
+                  <button
+                    type="button"
+                    className="connection-remove-button"
+                    aria-label={`删除与${connection.fullName}的共同认识关系`}
+                    title="删除共同认识关系"
+                    onClick={() =>
+                      update((current) =>
+                        removeConnection(current, person.id, connection.id),
+                      )
+                    }
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
               {!bundle.connections.length ? (
                 <p className="empty-copy">还没有共同认识的人。</p>
               ) : null}
@@ -602,59 +690,22 @@ export function PersonPage() {
           <section className="dossier-section">
             <SectionHeading
               icon={<Paperclip size={19} />}
-              title="附件与互动"
+              title="附件"
               actions={
-                <>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => openDialog('interaction')}
-                  >
-                    记录互动
-                  </button>
-                  <label className="file-action">
-                    <Plus size={14} />
-                    上传附件
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx,.xls,.xlsx"
-                      onChange={handleAttachment}
-                    />
-                  </label>
-                </>
+                <label className="file-action">
+                  <Plus size={14} />
+                  上传附件
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx,.xls,.xlsx"
+                    onChange={handleAttachment}
+                  />
+                </label>
               }
             />
-            {bundle.interactions.length ? (
-              <ul className="item-list interaction-list">
-                {bundle.interactions.map((interaction) => (
-                  <li key={interaction.id}>
-                    <span className="list-initial">
-                      {channelLabels[interaction.channel].slice(0, 1)}
-                    </span>
-                    <div>
-                      <strong>
-                        {interaction.occurredOn} ·{' '}
-                        {channelLabels[interaction.channel]}
-                      </strong>
-                      <p>{interaction.summary}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="row-edit-button"
-                      aria-label={`编辑互动${interaction.occurredOn}`}
-                      onClick={() => openDialog('interaction', interaction.id)}
-                    >
-                      编辑
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="empty-copy">还没有互动记录。</p>
-            )}
-            {bundle.attachments.length ? (
+            {libraryAttachments.length ? (
               <div className="attachment-grid">
-                {bundle.attachments.map((attachment) => (
+                {libraryAttachments.map((attachment) => (
                   <ResolvedAttachmentLink
                     key={attachment.id}
                     attachment={attachment}
@@ -662,7 +713,9 @@ export function PersonPage() {
                   />
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="empty-copy">还没有附件。</p>
+            )}
             {uploadError ? (
               <p className="form-error" role="alert">
                 {uploadError}
@@ -898,7 +951,19 @@ export function PersonPage() {
               : undefined
           }
           onClose={closeDialog}
-          onSave={(value) => {
+          onSave={async (value, files) => {
+            const interactionId =
+              editingId ?? `interaction-${crypto.randomUUID()}`
+            const uploaded = await Promise.all(
+              files.map((file) =>
+                repository.uploadAttachment(
+                  file,
+                  person.id,
+                  null,
+                  interactionId,
+                ),
+              ),
+            )
             update((current) => ({
               ...current,
               interactions: editingId
@@ -909,10 +974,11 @@ export function PersonPage() {
                     ...current.interactions,
                     {
                       ...value,
-                      id: `interaction-${crypto.randomUUID()}`,
+                      id: interactionId,
                       personId: person.id,
                     },
                   ],
+              attachments: [...current.attachments, ...uploaded],
             }))
             closeDialog()
           }}

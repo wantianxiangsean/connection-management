@@ -7,10 +7,14 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Fragment, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { getArchiveColumns } from '../../domain/archive'
+import {
+  getSurnameInitial,
+  sortBySurname,
+} from '../../domain/alphabet'
 import { getCoachStatus } from '../../domain/coach'
 import { getUpcomingDates } from '../../domain/dates'
 import { matchesPersonSearch } from '../../domain/search'
@@ -26,6 +30,28 @@ import { useWorkspace } from '../../app/WorkspaceContext'
 import { PersonDialog } from './PersonDialog'
 
 const tiers: RelationshipTier[] = ['soul', 'close', 'friend', 'acquaintance']
+type CoachRange = 'today' | 'week' | 'month'
+
+const coachRanges: Array<{
+  value: CoachRange
+  label: string
+  title: string
+  maxDays: number
+}> = [
+  { value: 'today', label: '今天', title: '今天可以想起谁', maxDays: 0 },
+  {
+    value: 'week',
+    label: '未来7天',
+    title: '未来7天可以想起谁',
+    maxDays: 7,
+  },
+  {
+    value: 'month',
+    label: '未来30天',
+    title: '未来30天可以想起谁',
+    maxDays: 30,
+  },
+]
 
 const columnLabels: Record<string, string> = {
   fullName: '姓名',
@@ -40,7 +66,13 @@ const columnLabels: Record<string, string> = {
 
 export function ArchivePage() {
   const { snapshot, update } = useWorkspace()
-  const [tier, setTier] = useState<RelationshipTier>('soul')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTier = searchParams.get('tier')
+  const [tier, setTier] = useState<RelationshipTier>(
+    tiers.includes(requestedTier as RelationshipTier)
+      ? (requestedTier as RelationshipTier)
+      : 'soul',
+  )
   const [query, setQuery] = useState('')
   const [showAcquaintanceDetails, setShowAcquaintanceDetails] = useState(
     () => localStorage.getItem('show-acquaintance-details') === 'true',
@@ -49,6 +81,18 @@ export function ArchivePage() {
   const [influenceFilter, setInfluenceFilter] = useState('')
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [coachRange, setCoachRange] = useState<CoachRange>('today')
+  const [visibleCustomFieldIds, setVisibleCustomFieldIds] = useState<string[]>(
+    () => {
+      try {
+        return JSON.parse(
+          localStorage.getItem('visible-custom-fields') ?? '[]',
+        ) as string[]
+      } catch {
+        return []
+      }
+    },
+  )
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const contacts = listActiveContacts(snapshot)
@@ -69,38 +113,77 @@ export function ArchivePage() {
     const source = query.trim()
       ? allBundles.filter((bundle) => matchesPersonSearch(bundle, query))
       : allBundles.filter((bundle) => bundle.person.tier === tier)
-    return source
-      .map((bundle) => bundle.person)
-      .filter((person) => !regionFilter || person.region === regionFilter)
-      .filter((person) => !influenceFilter || person.influence === influenceFilter)
+    return sortBySurname(
+      source
+        .map((bundle) => bundle.person)
+        .filter((person) => !regionFilter || person.region === regionFilter)
+        .filter(
+          (person) =>
+            !influenceFilter || person.influence === influenceFilter,
+        ),
+    )
   }, [allBundles, query, tier, regionFilter, influenceFilter])
 
   const columns =
     query.trim()
-      ? getArchiveColumns('friend', true, snapshot.customFields)
-      : getArchiveColumns(tier, showAcquaintanceDetails, snapshot.customFields)
+      ? getArchiveColumns(
+          'friend',
+          true,
+          snapshot.customFields.filter((field) =>
+            visibleCustomFieldIds.includes(field.id),
+          ),
+        )
+      : getArchiveColumns(
+          tier,
+          showAcquaintanceDetails,
+          snapshot.customFields.filter((field) =>
+            visibleCustomFieldIds.includes(field.id),
+          ),
+        )
+  const showAcquaintanceGrid =
+    tier === 'acquaintance' && !query.trim() && !showAcquaintanceDetails
+  const acquaintanceGroups = filteredContacts.reduce<
+    Array<{ initial: string; people: Person[] }>
+  >((groups, person) => {
+    const initial = getSurnameInitial(person.fullName)
+    const current = groups.at(-1)
+    if (current?.initial === initial) current.people.push(person)
+    else groups.push({ initial, people: [person] })
+    return groups
+  }, [])
 
   const coachItems = contacts
-    .map((person) => {
+    .flatMap((person) => {
       const bundle = getPersonBundle(snapshot, person.id)
-      if (!bundle) return null
-      return {
-        person,
-        status: getCoachStatus(
+      if (!bundle) return []
+      return [
+        {
           person,
-          bundle.interactions,
-          bundle.importantDates,
-          today,
-          bundle.detailEntries,
-          bundle.goals,
-        ),
-      }
+          status: getCoachStatus(
+            person,
+            bundle.interactions,
+            bundle.importantDates,
+            today,
+            bundle.detailEntries,
+            bundle.goals,
+          ),
+        },
+      ]
     })
     .filter(
       (item) =>
-        item && !['unset', 'snoozed'].includes(item.status.state),
+        !['unset', 'snoozed'].includes(item.status.state),
     )
-    .sort((a, b) => (b?.status.priority ?? 0) - (a?.status.priority ?? 0))
+    .filter((item) => {
+      const selectedRange = coachRanges.find(
+        (range) => range.value === coachRange,
+      )!
+      return (
+        item.status.daysUntilDue !== null &&
+        item.status.daysUntilDue <= selectedRange.maxDays
+      )
+    })
+    .sort((a, b) => b.status.priority - a.status.priority)
     .slice(0, 3)
 
   const upcoming = snapshot.importantDates
@@ -121,6 +204,15 @@ export function ArchivePage() {
     const next = !showAcquaintanceDetails
     setShowAcquaintanceDetails(next)
     localStorage.setItem('show-acquaintance-details', String(next))
+  }
+
+  function changeTier(nextTier: RelationshipTier) {
+    setTier(nextTier)
+    setQuery('')
+    setSearchParams(
+      nextTier === 'soul' ? {} : { tier: nextTier },
+      { replace: true },
+    )
   }
 
   function renderCell(person: Person, column: string) {
@@ -184,14 +276,48 @@ export function ArchivePage() {
     return person[column as keyof Person] || '—'
   }
 
+  function renderTableRows() {
+    let currentInitial = ''
+    return filteredContacts.map((person) => {
+      const initial = getSurnameInitial(person.fullName)
+      const startsGroup = initial !== currentInitial
+      currentInitial = initial
+      return (
+        <Fragment key={person.id}>
+          {startsGroup ? (
+            <tr className="surname-group-row">
+              <th scope="rowgroup" colSpan={columns.length}>
+                <span>{initial}</span>
+              </th>
+            </tr>
+          ) : null}
+          <tr>
+            {columns.map((column) => (
+              <td
+                key={column}
+                data-label={
+                  columnLabels[column] ??
+                  snapshot.customFields.find(
+                    (field) => `custom:${field.id}` === column,
+                  )?.label
+                }
+              >
+                {renderCell(person, column)}
+              </td>
+            ))}
+          </tr>
+        </Fragment>
+      )
+    })
+  }
+
   return (
     <div className="archive-page">
       <header className="page-heading">
         <div>
-          <p className="section-overline">你的私人关系档案</p>
-          <h1>人脉归档</h1>
-          <p>
-            共 {contacts.length} 位联系人。先从一个名字开始，慢慢补上值得记住的细节。
+          <h1>155人脉管理</h1>
+          <p className="page-purpose">
+            我想要做什么？我为谁而做？他们需要什么？因为我，他们有什么改变？
           </p>
         </div>
         <button className="button primary" type="button" onClick={() => setAddOpen(true)}>
@@ -204,8 +330,22 @@ export function ArchivePage() {
         <div className="coach-ribbon-heading">
           <Sparkles size={18} aria-hidden="true" />
           <div>
-            <strong>今天可以想起谁</strong>
+            <strong>
+              {coachRanges.find((range) => range.value === coachRange)?.title}
+            </strong>
             <small>依据你亲手设置的联系周期</small>
+            <div className="coach-range-tabs" aria-label="关系教练时间范围">
+              {coachRanges.map((range) => (
+                <button
+                  key={range.value}
+                  type="button"
+                  aria-pressed={coachRange === range.value}
+                  onClick={() => setCoachRange(range.value)}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="coach-items">
@@ -243,10 +383,7 @@ export function ArchivePage() {
                 role="tab"
                 aria-selected={tier === item}
                 className={tier === item ? 'active' : ''}
-                onClick={() => {
-                  setTier(item)
-                  setQuery('')
-                }}
+                onClick={() => changeTier(item)}
               >
                 {tierLabels[item]}
                 <span>{tiersCount[item]}</span>
@@ -293,7 +430,27 @@ export function ArchivePage() {
             {snapshot.customFields.filter((field) => field.isActive).length ? (
               snapshot.customFields
                 .filter((field) => field.isActive)
-                .map((field) => <span key={field.id}>{field.label}</span>)
+                .map((field) => (
+                  <label key={field.id} className="column-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={visibleCustomFieldIds.includes(field.id)}
+                      onChange={(event) => {
+                        const next = event.target.checked
+                          ? [...visibleCustomFieldIds, field.id]
+                          : visibleCustomFieldIds.filter(
+                              (fieldId) => fieldId !== field.id,
+                            )
+                        setVisibleCustomFieldIds(next)
+                        localStorage.setItem(
+                          'visible-custom-fields',
+                          JSON.stringify(next),
+                        )
+                      }}
+                    />
+                    {field.label}
+                  </label>
+                ))
             ) : (
               <span>尚未添加</span>
             )}
@@ -329,40 +486,60 @@ export function ArchivePage() {
         </div>
 
         <div className="archive-table-wrap">
-          <table className="archive-table">
-            <thead>
-              <tr>
-                {columns.map((column) => (
-                  <th key={column} scope="col">
-                    {columnLabels[column] ??
-                      snapshot.customFields.find(
-                        (field) => `custom:${field.id}` === column,
-                      )?.label ??
-                      '补充资料'}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContacts.map((person) => (
-                <tr key={person.id}>
+          {showAcquaintanceGrid ? (
+            <ul className="acquaintance-directory" aria-label="认识的人名单">
+              {acquaintanceGroups.map((group) => (
+                <li key={group.initial} className="alphabet-block">
+                  <div className="alphabet-heading">
+                    <span>{group.initial}</span>
+                    <i aria-hidden="true" />
+                  </div>
+                  <div className="acquaintance-grid">
+                    {group.people.map((person) => (
+                      <Link
+                        key={person.id}
+                        className="acquaintance-name-link"
+                        to={`/people/${person.id}`}
+                        aria-label={person.fullName}
+                      >
+                        <span className="name-avatar">
+                          {person.avatarUrl ? (
+                            <img src={person.avatarUrl} alt="" />
+                          ) : (
+                            person.fullName.slice(0, 1)
+                          )}
+                        </span>
+                        <span className="acquaintance-person-copy">
+                          <strong>{person.fullName}</strong>
+                          <small>{person.role || '角色未记录'}</small>
+                          <small>
+                            {person.occupation || '职业未记录'}
+                          </small>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <table className="archive-table">
+              <thead>
+                <tr>
                   {columns.map((column) => (
-                    <td
-                      key={column}
-                      data-label={
-                        columnLabels[column] ??
+                    <th key={column} scope="col">
+                      {columnLabels[column] ??
                         snapshot.customFields.find(
                           (field) => `custom:${field.id}` === column,
-                        )?.label
-                      }
-                    >
-                      {renderCell(person, column)}
-                    </td>
+                        )?.label ??
+                        '补充资料'}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>{renderTableRows()}</tbody>
+            </table>
+          )}
           {!filteredContacts.length ? (
             <div className="empty-state">
               <span className="empty-illustration">人</span>
@@ -381,7 +558,7 @@ export function ArchivePage() {
         open={addOpen}
         initialTier={tier}
         onClose={() => setAddOpen(false)}
-        onSubmit={(input) => {
+        onSubmit={(input, keepOpen) => {
           const person = createPersonRecord({
             kind: 'contact',
             tier: input.tier,
@@ -405,8 +582,8 @@ export function ArchivePage() {
             ...current,
             people: [...current.people, person],
           }))
-          setTier(input.tier)
-          setAddOpen(false)
+          changeTier(input.tier)
+          if (!keepOpen) setAddOpen(false)
         }}
       />
     </div>

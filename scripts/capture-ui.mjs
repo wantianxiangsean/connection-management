@@ -9,7 +9,7 @@ async function signIn(page) {
   await page.getByPlaceholder('187手机').fill('13800138000')
   await page.getByPlaceholder('leeds').fill('preview')
   await page.getByRole('button', { name: '登录' }).click()
-  await page.getByRole('heading', { name: '人脉归档' }).waitFor()
+  await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
 }
 
 const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
@@ -30,6 +30,17 @@ await desktop.screenshot({
   fullPage: true,
 })
 await desktop.getByRole('button', { name: '关闭' }).click()
+await desktop.getByRole('tab', { name: /认识的人/ }).click()
+await desktop.screenshot({
+  path: 'artifacts/acquaintance-desktop.png',
+  fullPage: true,
+})
+await desktop.getByRole('tab', { name: /好友/ }).click()
+await desktop.screenshot({
+  path: 'artifacts/archive-grouped-desktop.png',
+  fullPage: true,
+})
+await desktop.getByRole('tab', { name: /命友/ }).click()
 await desktop.getByRole('link', { name: '林知秋' }).click()
 await desktop.getByRole('main', { name: '林知秋的全息档案' }).waitFor()
 await desktop.screenshot({

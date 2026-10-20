@@ -167,7 +167,7 @@ export function BasicProfileDialog({
         </label>
         <footer>
           <button type="button" className="danger-text-button" onClick={onDelete}>
-            移入回收站
+            删除联系人
           </button>
           <button type="button" className="button ghost" onClick={onClose}>
             取消
@@ -708,7 +708,7 @@ export function InteractionDialog({
     occurredOn: string
     channel: InteractionChannel
     summary: string
-  }) => void
+  }, files: File[]) => void | Promise<void>
   onDelete?: () => void
 }) {
   const [occurredOn, setOccurredOn] = useState(
@@ -718,14 +718,26 @@ export function InteractionDialog({
     initial?.channel ?? 'meeting',
   )
   const [summary, setSummary] = useState(initial?.summary ?? '')
+  const [files, setFiles] = useState<File[]>([])
+  const [fileError, setFileError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   return (
     <DialogFrame title={initial ? '编辑互动' : '记录互动'} onClose={onClose}>
       <form
         className="stack-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault()
           if (!summary.trim()) return
-          onSave({ occurredOn, channel, summary })
+          setBusy(true)
+          try {
+            await onSave({ occurredOn, channel, summary }, files)
+          } catch (cause) {
+            setFileError(
+              cause instanceof Error ? cause.message : '互动或附件保存失败',
+            )
+          } finally {
+            setBusy(false)
+          }
         }}
       >
         <div className="form-grid">
@@ -748,6 +760,56 @@ export function InteractionDialog({
           <span>聊了什么</span>
           <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={5} required />
         </label>
+        <label className="interaction-attachment-picker">
+          <span>添加互动附件</span>
+          <input
+            type="file"
+            multiple
+            aria-label="添加互动附件"
+            accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx,.xls,.xlsx"
+            onChange={(event) => {
+              const nextFiles = Array.from(event.target.files ?? [])
+              event.target.value = ''
+              const oversized = nextFiles.find(
+                (file) => file.size > 10 * 1024 * 1024,
+              )
+              if (oversized) {
+                setFileError(`${oversized.name} 超过 10 MB`)
+                return
+              }
+              setFileError(null)
+              setFiles((current) => [...current, ...nextFiles])
+            }}
+          />
+          <small className="field-help">
+            可添加照片、PDF、Office 文档或文本，单个文件不超过 10 MB。
+          </small>
+        </label>
+        {files.length ? (
+          <ul className="selected-file-list">
+            {files.map((file, index) => (
+              <li key={`${file.name}-${index}`}>
+                <span>{file.name}</span>
+                <button
+                  type="button"
+                  aria-label={`移除附件${file.name}`}
+                  onClick={() =>
+                    setFiles((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                >
+                  移除
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {fileError ? (
+          <p className="form-error" role="alert">
+            {fileError}
+          </p>
+        ) : null}
         <footer>
           {initial && onDelete ? (
             <button type="button" className="danger-text-button" onClick={onDelete}>
@@ -757,8 +819,8 @@ export function InteractionDialog({
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
-          <button type="submit" className="button primary">
-            保存互动
+          <button type="submit" className="button primary" disabled={busy}>
+            {busy ? '正在保存…' : '保存互动'}
           </button>
         </footer>
       </form>
