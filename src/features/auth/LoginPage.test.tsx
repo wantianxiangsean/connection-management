@@ -19,4 +19,3 @@ describe('login page', () => {
     expect(screen.queryByText(/注册账号/)).not.toBeInTheDocument()
   })
 })
-

@@ -1947,7 +1947,8 @@ ul {
   margin-top: 16px;
 }
 
-.attachment-grid a {
+.attachment-grid a,
+.attachment-grid > span {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1956,6 +1957,15 @@ ul {
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.25);
   font-size: 0.72rem;
+}
+
+.attachment-unavailable {
+  opacity: 0.62;
+}
+
+.attachment-unavailable small {
+  color: var(--seal);
+  font-size: 0.58rem;
 }
 
 /* Utility pages and dialogs */
@@ -2613,4 +2623,3 @@ button.data-action-card {
     transition-duration: 0.01ms !important;
   }
 }
-

@@ -15,4 +15,3 @@ describe('CSV import', () => {
     expect(preview.rows[1].duplicatePersonId).toBeNull()
   })
 })
-

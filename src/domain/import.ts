@@ -57,4 +57,3 @@ export function buildImportPreview(
 
   return { headers: result.meta.fields ?? [], rows }
 }
-

@@ -111,4 +111,3 @@ function fileToDataUrl(file: File) {
     reader.readAsDataURL(file)
   })
 }
-

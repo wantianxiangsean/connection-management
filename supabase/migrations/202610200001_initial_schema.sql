@@ -518,11 +518,30 @@ grant execute on function public.save_connection_workspace(jsonb) to authenticat
 grant execute on function public.search_contacts(text) to authenticated;
 grant execute on function public.purge_expired_connection_people() to authenticated;
 
-insert into storage.buckets (id, name, public, file_size_limit)
-values ('connection-attachments', 'connection-attachments', false, 10485760)
+insert into storage.buckets (
+  id, name, public, file_size_limit, allowed_mime_types
+)
+values (
+  'connection-attachments',
+  'connection-attachments',
+  false,
+  10485760,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'text/plain',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ]
+)
 on conflict (id) do update
 set public = false,
-    file_size_limit = 10485760;
+    file_size_limit = 10485760,
+    allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists connection_attachments_owner_read on storage.objects;
 drop policy if exists connection_attachments_owner_insert on storage.objects;
@@ -556,4 +575,3 @@ using (
   bucket_id = 'connection-attachments'
   and (storage.foldername(name))[1] = auth.uid()::text
 );
-

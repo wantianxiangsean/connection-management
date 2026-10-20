@@ -873,4 +873,3 @@ export function CustomValuesDialog({
     </DialogFrame>
   )
 }
-

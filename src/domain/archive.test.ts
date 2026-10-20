@@ -29,4 +29,3 @@ describe('archive column behavior', () => {
     })
   })
 })
-

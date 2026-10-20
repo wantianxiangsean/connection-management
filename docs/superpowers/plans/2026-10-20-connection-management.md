@@ -91,4 +91,3 @@
 - [ ] Add a Playwright smoke scenario for login and archive.
 - [ ] Run the full test suite, build, and visual checks at desktop and mobile widths.
 - [ ] Commit deployment artifacts and documentation.
-

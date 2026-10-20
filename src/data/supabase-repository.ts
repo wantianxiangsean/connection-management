@@ -128,4 +128,3 @@ function emptyWorkspace(): DatabaseSnapshot {
     customValues: [],
   }
 }
-

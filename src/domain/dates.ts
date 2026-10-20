@@ -119,4 +119,3 @@ export function getUpcomingDates(
     )
     .sort((a, b) => a.occurrence.date.localeCompare(b.occurrence.date))
 }
-

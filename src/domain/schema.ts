@@ -55,4 +55,3 @@ export const detailEntrySchema = z.object({
   observedOn: z.string().min(1),
   followUpOn: z.string().nullable().default(null),
 })
-

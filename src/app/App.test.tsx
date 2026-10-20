@@ -125,4 +125,3 @@ describe('archive application flow', () => {
     expect(await screen.findByRole('link', { name: '沈禾' })).toBeInTheDocument()
   })
 })
-

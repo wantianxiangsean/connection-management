@@ -22,4 +22,3 @@ export interface WorkspaceRepository {
   ): Promise<Attachment>
   getAttachmentUrl(path: string): Promise<string>
 }
-

@@ -115,4 +115,3 @@ describe('workspace deletion lifecycle', () => {
     expect(snapshot.people.map((item) => item.id)).toEqual(['b'])
   })
 })
-

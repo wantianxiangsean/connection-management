@@ -1,6 +1,5 @@
 import {
   QueryClient,
-  useMutation,
   useQuery,
 } from '@tanstack/react-query'
 import {
@@ -8,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -16,6 +16,7 @@ import type {
   SessionUser,
   WorkspaceRepository,
 } from '../data/repository'
+import { SaveQueue } from '../data/save-queue'
 
 interface WorkspaceValue {
   snapshot: DatabaseSnapshot
@@ -53,18 +54,25 @@ export function WorkspaceProvider({
   })
   const [snapshot, setSnapshot] = useState<DatabaseSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (query.data) setSnapshot(query.data)
   }, [query.data])
 
-  const mutation = useMutation({
-    mutationFn: (next: DatabaseSnapshot) => repository.save(next),
-    onError: (cause) => {
-      setError(cause instanceof Error ? cause.message : '保存失败，请稍后重试')
-      void query.refetch()
-    },
-  })
+  const saveQueue = useRef<SaveQueue<DatabaseSnapshot> | null>(null)
+  if (!saveQueue.current) {
+    saveQueue.current = new SaveQueue(
+      (next) => repository.save(next),
+      (cause) => {
+        setError(cause instanceof Error ? cause.message : '保存失败，请稍后重试')
+        void queryClient.invalidateQueries({
+          queryKey: ['workspace', repository.mode, user.id],
+        })
+      },
+      setSaving,
+    )
+  }
 
   const value = useMemo<WorkspaceValue | null>(() => {
     if (!snapshot) return null
@@ -75,16 +83,16 @@ export function WorkspaceProvider({
         setSnapshot((current) => {
           if (!current) return current
           const next = mutator(current)
-          mutation.mutate(next)
+          void saveQueue.current?.enqueue(next)
           return next
         })
       },
-      saving: mutation.isPending,
+      saving,
       error,
       repository,
       user,
     }
-  }, [snapshot, mutation.isPending, error, repository, user])
+  }, [snapshot, saving, error, repository, user])
 
   if (query.isError) {
     return (
@@ -118,4 +126,3 @@ export function useWorkspace() {
   if (!value) throw new Error('useWorkspace must be used inside WorkspaceProvider')
   return value
 }
-

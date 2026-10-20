@@ -61,4 +61,3 @@ describe('global profile search', () => {
     expect(matchesPersonSearch(bundle, '燕麦')).toBe(true)
   })
 })
-

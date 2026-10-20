@@ -157,4 +157,3 @@ export function getCoachStatus(
     priority: 10,
   }
 }
-

@@ -29,4 +29,3 @@ describe('local repository', () => {
     expect((await second.load()).customFields[0].label).toBe('共同爱好')
   })
 })
-

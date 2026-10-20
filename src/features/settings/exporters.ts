@@ -69,4 +69,3 @@ export async function createBackupArchive(
 
   return zip.generateAsync({ type: 'blob' })
 }
-

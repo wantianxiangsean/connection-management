@@ -16,4 +16,3 @@ test('owner can sign in and review a relationship profile', async ({ page }) => 
   ).toBeVisible()
   await expect(page.getByText('小满最近在学画猫', { exact: false })).toBeVisible()
 })
-

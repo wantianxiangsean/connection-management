@@ -55,4 +55,3 @@ await browser.close()
 if (failures.length) {
   throw new Error(`Browser errors: ${failures.join(' | ')}`)
 }
-

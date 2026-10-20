@@ -29,4 +29,3 @@ export function matchesPersonSearch(bundle: PersonBundle, query: string) {
 
   return values.some((value) => value.toLocaleLowerCase('zh-CN').includes(needle))
 }
-

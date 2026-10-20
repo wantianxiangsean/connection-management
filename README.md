@@ -64,4 +64,3 @@ VITE_SUPABASE_ANON_KEY=your-public-key
 - `src/features`：登录、归档表、人物卡、设置工作流。
 - `supabase/migrations`：数据库、RLS、Storage 与 RPC。
 - `.github/workflows/pages.yml`：GitHub Pages 自动发布。
-

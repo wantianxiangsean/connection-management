@@ -39,4 +39,3 @@ describe('important dates', () => {
     expect(getUpcomingDates([birthday], '2026-10-20', 30)).toHaveLength(1)
   })
 })
-

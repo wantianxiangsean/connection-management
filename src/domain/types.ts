@@ -217,4 +217,3 @@ export const channelLabels: Record<InteractionChannel, string> = {
   message: '消息',
   other: '其他',
 }
-

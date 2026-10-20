@@ -43,4 +43,3 @@ export function getArchiveColumns(
 
   return [...fullColumns, ...activeCustom]
 }
-

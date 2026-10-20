@@ -42,6 +42,10 @@ import {
   ImportantDateDialog,
   InteractionDialog,
 } from './ProfileDialogs'
+import {
+  ResolvedAttachmentLink,
+  ResolvedImage,
+} from '../../components/ResolvedAsset'
 
 type DialogName =
   | 'basic'
@@ -129,7 +133,7 @@ export function PersonPage() {
     setUploadError(null)
     try {
       const uploaded = await repository.uploadAttachment(file, person.id)
-      updatePerson({ avatarUrl: uploaded.signedUrl ?? uploaded.storagePath })
+      updatePerson({ avatarUrl: uploaded.storagePath })
     } catch (cause) {
       setUploadError(cause instanceof Error ? cause.message : '头像上传失败')
     }
@@ -180,7 +184,11 @@ export function PersonPage() {
           </div>
           <div className="portrait">
             {person.avatarUrl ? (
-              <img src={person.avatarUrl} alt={`${person.fullName}的头像`} />
+              <ResolvedImage
+                path={person.avatarUrl}
+                alt={`${person.fullName}的头像`}
+                repository={repository}
+              />
             ) : (
               <span>{person.fullName.slice(0, 1)}</span>
             )}
@@ -647,15 +655,11 @@ export function PersonPage() {
             {bundle.attachments.length ? (
               <div className="attachment-grid">
                 {bundle.attachments.map((attachment) => (
-                  <a
+                  <ResolvedAttachmentLink
                     key={attachment.id}
-                    href={attachment.signedUrl ?? attachment.storagePath}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Paperclip size={16} />
-                    {attachment.fileName}
-                  </a>
+                    attachment={attachment}
+                    repository={repository}
+                  />
                 ))}
               </div>
             ) : null}
@@ -964,4 +968,3 @@ function SectionHeading({
     </div>
   )
 }
-

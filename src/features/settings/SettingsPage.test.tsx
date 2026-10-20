@@ -78,4 +78,3 @@ describe('settings workflows', () => {
     expect(await screen.findByRole('link', { name: '林知秋' })).toBeInTheDocument()
   })
 })
-
