@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   addConnection,
+  clearRecycleBin,
   emptySnapshot,
   getPersonBundle,
   listActiveContacts,
   promoteReference,
   purgeExpiredPeople,
+  removeCustomField,
   restorePerson,
   softDeletePerson,
   upsertPerson,
@@ -114,5 +116,75 @@ describe('workspace deletion lifecycle', () => {
     snapshot = purgeExpiredPeople(snapshot, '2026-10-20')
 
     expect(snapshot.people.map((item) => item.id)).toEqual(['b'])
+  })
+
+  it('permanently clears every person and related record in the recycle bin', () => {
+    let snapshot = emptySnapshot()
+    snapshot = upsertPerson(snapshot, person('active', '保留联系人'))
+    snapshot = upsertPerson(snapshot, person('deleted', '回收站联系人'))
+    snapshot = softDeletePerson(snapshot, 'deleted', '2026-10-01T00:00:00Z')
+    snapshot.connections.push({
+      id: 'connection-1',
+      personAId: 'active',
+      personBId: 'deleted',
+      note: '',
+    })
+    snapshot.detailEntries.push({
+      id: 'detail-1',
+      personId: 'deleted',
+      category: '生活',
+      content: '会被永久删除',
+      observedOn: '2026-10-01',
+      followUpOn: null,
+      createdAt: '2026-10-01T00:00:00Z',
+      updatedAt: '2026-10-01T00:00:00Z',
+    })
+
+    snapshot = clearRecycleBin(snapshot)
+
+    expect(snapshot.people.map((item) => item.id)).toEqual(['active'])
+    expect(snapshot.connections).toHaveLength(0)
+    expect(snapshot.detailEntries).toHaveLength(0)
+  })
+
+  it('removes a custom field together with its saved values', () => {
+    const snapshot = emptySnapshot()
+    snapshot.customFields.push(
+      {
+        id: 'field-keep',
+        label: '保留字段',
+        type: 'text',
+        options: [],
+        displayOrder: 0,
+        isActive: true,
+      },
+      {
+        id: 'field-remove',
+        label: '删除字段',
+        type: 'text',
+        options: [],
+        displayOrder: 1,
+        isActive: true,
+      },
+    )
+    snapshot.customValues.push(
+      {
+        id: 'value-keep',
+        personId: 'a',
+        fieldId: 'field-keep',
+        value: '保留',
+      },
+      {
+        id: 'value-remove',
+        personId: 'a',
+        fieldId: 'field-remove',
+        value: '删除',
+      },
+    )
+
+    const next = removeCustomField(snapshot, 'field-remove')
+
+    expect(next.customFields.map((field) => field.id)).toEqual(['field-keep'])
+    expect(next.customValues.map((value) => value.id)).toEqual(['value-keep'])
   })
 })

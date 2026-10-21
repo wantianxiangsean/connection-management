@@ -27,5 +27,15 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    {
+      name: 'tablet',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+        viewport: { width: 820, height: 1180 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
 })

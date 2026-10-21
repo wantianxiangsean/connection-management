@@ -4,6 +4,22 @@ import { describe, expect, it, vi } from 'vitest'
 import { PersonDialog } from './PersonDialog'
 
 describe('new person defaults', () => {
+  it('keeps the new person dialog title visually hidden', () => {
+    render(
+      <PersonDialog
+        open
+        initialTier="soul"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText('新建档案')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '先记下他是谁' }),
+    ).toHaveClass('sr-only')
+  })
+
   it('does not change the selected tier based on influence or intimacy', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()

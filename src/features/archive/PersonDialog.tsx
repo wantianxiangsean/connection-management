@@ -99,11 +99,10 @@ export function PersonDialog({
         aria-labelledby="new-person-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header>
-          <div>
-            <p className="section-overline">新建档案</p>
-            <h2 id="new-person-title">先记下他是谁</h2>
-          </div>
+        <header className="dialog-header-compact">
+          <h2 id="new-person-title" className="sr-only">
+            先记下他是谁
+          </h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="关闭">
             <X size={19} />
           </button>

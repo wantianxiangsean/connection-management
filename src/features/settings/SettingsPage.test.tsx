@@ -69,6 +69,8 @@ describe('settings workflows', () => {
       within(profileDialog).getByRole('button', { name: '删除联系人' }),
     )
 
+    await user.click(screen.getByRole('link', { name: '返回155人脉管理' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
     expect(screen.getByText('林知秋')).toBeInTheDocument()
@@ -76,5 +78,39 @@ describe('settings workflows', () => {
 
     await user.click(screen.getByRole('link', { name: '人脉' }))
     expect(await screen.findByRole('link', { name: '林知秋' })).toBeInTheDocument()
+  })
+
+  it('permanently clears the recycle bin after confirmation', async () => {
+    const user = await signIn()
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
+    const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
+    await user.click(
+      within(profileDialog).getByRole('button', { name: '删除联系人' }),
+    )
+
+    await user.click(screen.getByRole('link', { name: '返回155人脉管理' }))
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '设置' }))
+    await screen.findByRole('heading', { name: '设置' })
+    await user.click(screen.getByRole('button', { name: '清空回收站' }))
+
+    const confirmDialog = screen.getByRole('dialog', { name: '清空回收站' })
+    expect(within(confirmDialog).getByText('林知秋')).toBeInTheDocument()
+    await user.click(
+      within(confirmDialog).getByRole('button', { name: '永久删除' }),
+    )
+
+    expect(screen.getByText('回收站是空的。')).toBeInTheDocument()
+  })
+
+  it('deletes a custom dimension and its saved values', async () => {
+    const user = await signIn()
+    await user.click(screen.getByRole('link', { name: '设置' }))
+    await screen.findByRole('heading', { name: '设置' })
+
+    await user.click(screen.getByRole('button', { name: '删除认识渠道' }))
+
+    expect(screen.queryByText('认识渠道')).not.toBeInTheDocument()
   })
 })

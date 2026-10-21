@@ -1,6 +1,5 @@
 import type {
   CustomFieldDefinition,
-  RelationshipTier,
 } from './types'
 
 export { tierLabels } from './types'
@@ -28,8 +27,7 @@ const fullColumns: ArchiveColumn[] = [
 ]
 
 export function getArchiveColumns(
-  tier: RelationshipTier,
-  showAcquaintanceDetails: boolean,
+  showDetails: boolean,
   customFields: CustomFieldDefinition[],
 ) {
   const activeCustom = customFields
@@ -37,7 +35,7 @@ export function getArchiveColumns(
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map((field) => `custom:${field.id}` as const)
 
-  if (tier === 'acquaintance' && !showAcquaintanceDetails) {
+  if (!showDetails) {
     return ['fullName'] satisfies ArchiveColumn[]
   }
 

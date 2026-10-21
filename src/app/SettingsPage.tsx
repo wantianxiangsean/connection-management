@@ -1,14 +1,17 @@
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   DatabaseBackup,
   Download,
   FileUp,
+  LogOut,
   Plus,
   RotateCcw,
   Trash2,
 } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { DialogFrame } from '../components/DialogFrame'
 import type {
   CustomFieldDefinition,
@@ -17,8 +20,9 @@ import type {
 } from '../domain/types'
 import { buildImportPreview } from '../domain/import'
 import {
+  clearRecycleBin,
   createPersonRecord,
-  purgeExpiredPeople,
+  removeCustomField,
   restorePerson,
 } from '../domain/workspace'
 import { useWorkspace } from './WorkspaceContext'
@@ -38,7 +42,7 @@ const fieldTypeLabels: Record<CustomFieldType, string> = {
 }
 
 export function SettingsPage() {
-  const { snapshot, update, repository } = useWorkspace()
+  const { snapshot, update, repository, user } = useWorkspace()
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [duplicateChoices, setDuplicateChoices] = useState<
@@ -46,6 +50,9 @@ export function SettingsPage() {
   >({})
   const [importMessage, setImportMessage] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState('')
+  const [clearRecycleOpen, setClearRecycleOpen] = useState(false)
   const deleted = snapshot.people.filter((person) => person.deletedAt)
 
   async function readCsv(event: ChangeEvent<HTMLInputElement>) {
@@ -159,6 +166,19 @@ export function SettingsPage() {
     }
   }
 
+  async function signOut() {
+    setSigningOut(true)
+    setSignOutError('')
+    try {
+      await repository.signOut()
+    } catch (cause) {
+      setSignOutError(
+        cause instanceof Error ? cause.message : '退出失败，请稍后重试',
+      )
+      setSigningOut(false)
+    }
+  }
+
   function updateField(
     field: CustomFieldDefinition,
     patch: Partial<CustomFieldDefinition>,
@@ -191,9 +211,11 @@ export function SettingsPage() {
   return (
     <main className="settings-page settings-wide">
       <header className="settings-heading">
-        <p className="section-overline">档案柜设置</p>
+        <Link to="/" className="back-link settings-back-link" aria-label="人脉">
+          <ArrowLeft size={17} aria-hidden="true" />
+          返回人脉
+        </Link>
         <h1>设置</h1>
-        <p>调整归档表字段，备份你的资料，或恢复刚误删的人。</p>
       </header>
 
       <section className="settings-section" id="fields">
@@ -247,6 +269,17 @@ export function SettingsPage() {
                   >
                     {field.isActive ? '停用' : '恢复'}
                   </button>
+                  <button
+                    type="button"
+                    className="text-button field-delete-button"
+                    aria-label={`删除${field.label}`}
+                    onClick={() =>
+                      update((current) => removeCustomField(current, field.id))
+                    }
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    删除
+                  </button>
                 </div>
               </article>
             ))}
@@ -260,7 +293,6 @@ export function SettingsPage() {
         <div className="settings-section-heading">
           <div>
             <h2>导入与备份</h2>
-            <p>CSV 用于通讯录迁移；完整备份包含结构化资料和可读取的附件。</p>
           </div>
         </div>
         <div className="data-actions">
@@ -386,17 +418,11 @@ export function SettingsPage() {
           <button
             type="button"
             className="button ghost"
-            onClick={() =>
-              update((current) =>
-                purgeExpiredPeople(
-                  current,
-                  new Date().toISOString().slice(0, 10),
-                ),
-              )
-            }
+            disabled={!deleted.length}
+            onClick={() => setClearRecycleOpen(true)}
           >
             <Trash2 size={16} />
-            清理已过期
+            清空回收站
           </button>
         </div>
         {deleted.length ? (
@@ -436,6 +462,35 @@ export function SettingsPage() {
         )}
       </section>
 
+      <section className="settings-section account-section" id="account">
+        <div className="settings-section-heading">
+          <div>
+            <h2>账户</h2>
+            <p>退出当前登录，不会删除已经保存的人脉资料。</p>
+          </div>
+          <button
+            type="button"
+            className="button ghost"
+            onClick={signOut}
+            disabled={signingOut}
+          >
+            <LogOut size={16} aria-hidden="true" />
+            {signingOut ? '正在退出…' : '退出登录'}
+          </button>
+        </div>
+        <div className="account-summary">
+          <div>
+            <span>当前账户</span>
+            <strong>{user.phone || '本地预览'}</strong>
+          </div>
+          {signOutError ? (
+            <p className="form-error" role="alert">
+              {signOutError}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
       {fieldDialogOpen ? (
         <FieldDialog
           onClose={() => setFieldDialogOpen(false)}
@@ -457,6 +512,44 @@ export function SettingsPage() {
             setFieldDialogOpen(false)
           }}
         />
+      ) : null}
+
+      {clearRecycleOpen ? (
+        <DialogFrame
+          title="清空回收站"
+          overline="永久删除"
+          onClose={() => setClearRecycleOpen(false)}
+        >
+          <div className="stack-form confirmation-form">
+            <div>
+              <p>以下联系人及其全部关联资料将被永久删除，无法恢复：</p>
+              <ul>
+                {deleted.map((person) => (
+                  <li key={person.id}>{person.fullName}</li>
+                ))}
+              </ul>
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => setClearRecycleOpen(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="button danger"
+                onClick={() => {
+                  update((current) => clearRecycleBin(current))
+                  setClearRecycleOpen(false)
+                }}
+              >
+                永久删除
+              </button>
+            </footer>
+          </div>
+        </DialogFrame>
       ) : null}
     </main>
   )

@@ -2,13 +2,15 @@ import {
   CalendarDays,
   ChevronDown,
   Filter,
+  Pencil,
   Plus,
   Search,
+  Settings,
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
 import { Fragment, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { differenceInCalendarDays, format } from 'date-fns'
 import { getArchiveColumns } from '../../domain/archive'
 import {
@@ -17,6 +19,10 @@ import {
 } from '../../domain/alphabet'
 import { getCoachStatus } from '../../domain/coach'
 import { getUpcomingDates } from '../../domain/dates'
+import {
+  listRegionValues,
+  matchesRegion,
+} from '../../domain/locations'
 import { matchesPersonSearch } from '../../domain/search'
 import {
   influenceLabels,
@@ -64,8 +70,20 @@ const columnLabels: Record<string, string> = {
   coach: '联系状态',
 }
 
+const defaultColumnWidths: Record<string, number> = {
+  fullName: 220,
+  role: 160,
+  occupation: 170,
+  region: 130,
+  industry: 160,
+  influence: 110,
+  intimacy: 110,
+  coach: 140,
+}
+
 export function ArchivePage() {
   const { snapshot, update } = useWorkspace()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTier = searchParams.get('tier')
   const [tier, setTier] = useState<RelationshipTier>(
@@ -74,9 +92,15 @@ export function ArchivePage() {
       : 'soul',
   )
   const [query, setQuery] = useState('')
-  const [showAcquaintanceDetails, setShowAcquaintanceDetails] = useState(
-    () => localStorage.getItem('show-acquaintance-details') === 'true',
-  )
+  const [detailsExpanded, setDetailsExpanded] = useState<
+    Record<RelationshipTier, boolean>
+  >(() => ({
+    soul: true,
+    close: true,
+    friend: true,
+    acquaintance:
+      localStorage.getItem('show-acquaintance-details') === 'true',
+  }))
   const [regionFilter, setRegionFilter] = useState('')
   const [influenceFilter, setInfluenceFilter] = useState('')
   const [columnsOpen, setColumnsOpen] = useState(false)
@@ -93,10 +117,22 @@ export function ArchivePage() {
       }
     },
   )
+  const [tableEditing, setTableEditing] = useState(false)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    () => {
+      try {
+        return JSON.parse(
+          localStorage.getItem('archive-column-widths-v1') ?? '{}',
+        ) as Record<string, number>
+      } catch {
+        return {}
+      }
+    },
+  )
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const contacts = listActiveContacts(snapshot)
-  const regionOptions = [...new Set(contacts.map((item) => item.region).filter(Boolean))]
+  const regionOptions = listRegionValues(contacts.map((item) => item.region))
   const tiersCount = Object.fromEntries(
     tiers.map((item) => [item, contacts.filter((person) => person.tier === item).length]),
   ) as Record<RelationshipTier, number>
@@ -116,7 +152,7 @@ export function ArchivePage() {
     return sortBySurname(
       source
         .map((bundle) => bundle.person)
-        .filter((person) => !regionFilter || person.region === regionFilter)
+        .filter((person) => matchesRegion(person.region, regionFilter))
         .filter(
           (person) =>
             !influenceFilter || person.influence === influenceFilter,
@@ -124,25 +160,29 @@ export function ArchivePage() {
     )
   }, [allBundles, query, tier, regionFilter, influenceFilter])
 
+  const showDetails = detailsExpanded[tier]
   const columns =
     query.trim()
       ? getArchiveColumns(
-          'friend',
           true,
           snapshot.customFields.filter((field) =>
             visibleCustomFieldIds.includes(field.id),
           ),
         )
       : getArchiveColumns(
-          tier,
-          showAcquaintanceDetails,
+          showDetails,
           snapshot.customFields.filter((field) =>
             visibleCustomFieldIds.includes(field.id),
           ),
         )
-  const showAcquaintanceGrid =
-    tier === 'acquaintance' && !query.trim() && !showAcquaintanceDetails
-  const acquaintanceGroups = filteredContacts.reduce<
+  const showCompactDirectory = !query.trim() && !showDetails
+  const columnWidth = (column: string) =>
+    columnWidths[column] ?? defaultColumnWidths[column] ?? 160
+  const tableWidth = columns.reduce(
+    (total, column) => total + columnWidth(column),
+    0,
+  )
+  const compactGroups = filteredContacts.reduce<
     Array<{ initial: string; people: Person[] }>
   >((groups, person) => {
     const initial = getSurnameInitial(person.fullName)
@@ -218,10 +258,27 @@ export function ArchivePage() {
     )
     .slice(0, 4)
 
-  function toggleAcquaintanceDetails() {
-    const next = !showAcquaintanceDetails
-    setShowAcquaintanceDetails(next)
-    localStorage.setItem('show-acquaintance-details', String(next))
+  function toggleDetails() {
+    setDetailsExpanded((current) => {
+      const next = { ...current, [tier]: !current[tier] }
+      if (!next[tier]) setTableEditing(false)
+      localStorage.setItem(
+        'show-acquaintance-details',
+        String(next.acquaintance),
+      )
+      return next
+    })
+  }
+
+  function updateColumnWidth(column: string, width: number) {
+    const next = { ...columnWidths, [column]: width }
+    setColumnWidths(next)
+    localStorage.setItem('archive-column-widths-v1', JSON.stringify(next))
+  }
+
+  function resetColumnWidths() {
+    setColumnWidths({})
+    localStorage.removeItem('archive-column-widths-v1')
   }
 
   function changeTier(nextTier: RelationshipTier) {
@@ -250,7 +307,7 @@ export function ArchivePage() {
           </span>
           <span>
             <strong>{person.fullName}</strong>
-            {tier === 'acquaintance' && !showAcquaintanceDetails ? null : (
+            {!showDetails ? null : (
               <small>{person.role || '尚未记录角色'}</small>
             )}
           </span>
@@ -335,13 +392,23 @@ export function ArchivePage() {
         <div>
           <h1>155人脉管理</h1>
           <p className="page-purpose">
-            我想要做什么？我为谁而做？他们需要什么？因为我，他们有什么改变？
+            确定目标：我想要做什么？我为谁而做？他们需要什么？因为我，他们有什么改变？
           </p>
         </div>
-        <button className="button primary" type="button" onClick={() => setAddOpen(true)}>
-          <Plus size={18} aria-hidden="true" />
-          新增人物
-        </button>
+        <div className="page-heading-actions">
+          <button className="button primary" type="button" onClick={() => setAddOpen(true)}>
+            <Plus size={18} aria-hidden="true" />
+            新增人物
+          </button>
+          <Link
+            to="/settings"
+            className="button settings-entry-button"
+            aria-label="设置"
+            title="设置"
+          >
+            <Settings size={17} aria-hidden="true" />
+          </Link>
+        </div>
       </header>
 
       <section className="coach-ribbon" aria-label="关系教练">
@@ -429,13 +496,24 @@ export function ArchivePage() {
               显示列
               <ChevronDown size={14} aria-hidden="true" />
             </button>
-            {tier === 'acquaintance' && !query ? (
+            {!query.trim() ? (
               <button
                 type="button"
                 className="icon-text-button"
-                onClick={toggleAcquaintanceDetails}
+                onClick={toggleDetails}
               >
-                {showAcquaintanceDetails ? '收起资料' : '显示更多资料'}
+                {showDetails ? '收起资料' : '显示更多资料'}
+              </button>
+            ) : null}
+            {!showCompactDirectory ? (
+              <button
+                type="button"
+                className="icon-text-button"
+                aria-expanded={tableEditing}
+                onClick={() => setTableEditing((value) => !value)}
+              >
+                <Pencil size={16} aria-hidden="true" />
+                表格格式
               </button>
             ) : null}
           </div>
@@ -476,6 +554,48 @@ export function ArchivePage() {
           </div>
         ) : null}
 
+        {tableEditing && !showCompactDirectory ? (
+          <div className="column-width-panel">
+            <div className="column-width-panel-heading">
+              <strong>调整列宽</strong>
+              <button
+                type="button"
+                className="text-button"
+                onClick={resetColumnWidths}
+              >
+                恢复默认
+              </button>
+            </div>
+            <div className="column-width-grid">
+              {columns.map((column) => {
+                const label =
+                  columnLabels[column] ??
+                  snapshot.customFields.find(
+                    (field) => `custom:${field.id}` === column,
+                  )?.label ??
+                  '补充资料'
+                return (
+                  <label key={column} className="column-width-control">
+                    <span>{label}</span>
+                    <input
+                      type="range"
+                      min="100"
+                      max="340"
+                      step="10"
+                      value={columnWidth(column)}
+                      aria-label={`${label}列宽`}
+                      onChange={(event) =>
+                        updateColumnWidth(column, Number(event.target.value))
+                      }
+                    />
+                    <output>{columnWidth(column)}px</output>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
         <div className="table-filters">
           <span>筛选</span>
           <select
@@ -504,9 +624,12 @@ export function ArchivePage() {
         </div>
 
         <div className="archive-table-wrap">
-          {showAcquaintanceGrid ? (
-            <ul className="acquaintance-directory" aria-label="认识的人名单">
-              {acquaintanceGroups.map((group) => (
+          {showCompactDirectory ? (
+            <ul
+              className="acquaintance-directory"
+              aria-label={`${tierLabels[tier]}名单`}
+            >
+              {compactGroups.map((group) => (
                 <li key={group.initial} className="alphabet-block">
                   <div className="alphabet-heading">
                     <span>{group.initial}</span>
@@ -541,7 +664,21 @@ export function ArchivePage() {
               ))}
             </ul>
           ) : (
-            <table className="archive-table">
+            <table
+              className="archive-table"
+              style={{
+                tableLayout: 'fixed',
+                minWidth: `${tableWidth}px`,
+              }}
+            >
+              <colgroup>
+                {columns.map((column) => (
+                  <col
+                    key={column}
+                    style={{ width: `${columnWidth(column)}px` }}
+                  />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
                   {columns.map((column) => (
@@ -600,8 +737,12 @@ export function ArchivePage() {
             ...current,
             people: [...current.people, person],
           }))
-          changeTier(input.tier)
-          if (!keepOpen) setAddOpen(false)
+          if (keepOpen) {
+            changeTier(input.tier)
+          } else {
+            setAddOpen(false)
+            navigate(`/people/${person.id}`)
+          }
         }}
       />
     </div>

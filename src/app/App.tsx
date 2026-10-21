@@ -74,11 +74,7 @@ export function App({
           <Routes>
             <Route
               element={
-                <AppLayout
-                  user={session}
-                  repository={repository}
-                  onSignedOut={() => setSession(null)}
-                />
+                <AppLayout />
               }
             >
               <Route index element={<ArchivePage />} />

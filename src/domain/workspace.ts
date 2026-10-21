@@ -274,11 +274,10 @@ export function purgeExpiredPeople(
   today: string,
   retentionDays = 30,
 ) {
-  const snapshot = clone(source)
   const cutoff = new Date(`${today}T00:00:00`)
   cutoff.setDate(cutoff.getDate() - retentionDays)
   const idsToPurge = new Set(
-    snapshot.people
+    source.people
       .filter(
         (person) =>
           person.deletedAt &&
@@ -286,7 +285,39 @@ export function purgeExpiredPeople(
       )
       .map((person) => person.id),
   )
+  return removePeopleAndRelatedData(source, idsToPurge)
+}
 
+export function clearRecycleBin(source: DatabaseSnapshot) {
+  return removePeopleAndRelatedData(
+    source,
+    new Set(
+      source.people
+        .filter((person) => person.deletedAt)
+        .map((person) => person.id),
+    ),
+  )
+}
+
+export function removeCustomField(
+  source: DatabaseSnapshot,
+  fieldId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.customFields = snapshot.customFields.filter(
+    (field) => field.id !== fieldId,
+  )
+  snapshot.customValues = snapshot.customValues.filter(
+    (value) => value.fieldId !== fieldId,
+  )
+  return snapshot
+}
+
+function removePeopleAndRelatedData(
+  source: DatabaseSnapshot,
+  idsToPurge: Set<string>,
+) {
+  const snapshot = clone(source)
   if (idsToPurge.size === 0) return snapshot
 
   const belongsToPurged = (personId: string) => idsToPurge.has(personId)

@@ -1,20 +1,17 @@
 import {
   ArrowLeft,
   CakeSlice,
-  CalendarClock,
-  Clock3,
   FileText,
   Glasses,
   HeartHandshake,
   MessageCircleMore,
   Pencil,
-  Target,
   Users,
   X,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { addDays, format } from 'date-fns'
+import { format } from 'date-fns'
 import {
   channelLabels,
   influenceLabels,
@@ -27,17 +24,13 @@ import {
   promoteReference,
   removeConnection,
 } from '../../domain/workspace'
-import { getCoachStatus } from '../../domain/coach'
-import { getUpcomingDates } from '../../domain/dates'
 import { useWorkspace } from '../../app/WorkspaceContext'
 import {
   BasicProfileDialog,
   CareerDialog,
   ConnectionDialog,
-  CustomValuesDialog,
   DetailDialog,
   FamilyDialog,
-  GoalDialog,
   ImportantDateDialog,
   InteractionDialog,
   NotesDialog,
@@ -50,10 +43,8 @@ type DialogName =
   | 'connection'
   | 'family'
   | 'career'
-  | 'goal'
   | 'date'
   | 'interaction'
-  | 'custom'
   | 'notes'
   | null
 
@@ -77,23 +68,6 @@ export function PersonPage() {
   }
 
   const { person } = bundle
-  const activeCustomFields = snapshot.customFields
-    .filter((field) => field.isActive)
-    .sort((a, b) => a.displayOrder - b.displayOrder)
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const coach = getCoachStatus(
-    person,
-    bundle.interactions,
-    bundle.importantDates,
-    today,
-    bundle.detailEntries,
-    bundle.goals,
-  )
-  const upcomingDates = bundle.importantDates
-    .flatMap((date) =>
-      getUpcomingDates([date], today, 30).map((item) => ({ ...item, date })),
-    )
-    .slice(0, 3)
 
   function updatePerson(patch: Partial<typeof person>) {
     update((current) => ({
@@ -127,15 +101,17 @@ export function PersonPage() {
           <ArrowLeft size={17} />
           返回155人脉管理
         </Link>
-        <button
-          type="button"
-          className="button person-edit-button"
-          aria-label="编辑基本资料"
-          onClick={() => openDialog('basic')}
-        >
-          <Pencil size={16} />
-          编辑基本资料
-        </button>
+        <div className="person-topbar-actions">
+          <button
+            type="button"
+            className="button person-edit-button"
+            aria-label="编辑基本资料"
+            onClick={() => openDialog('basic')}
+          >
+            <Pencil size={16} />
+            编辑基本资料
+          </button>
+        </div>
       </header>
 
       <div className="person-layout">
@@ -173,42 +149,6 @@ export function PersonPage() {
             </div>
           </dl>
 
-          <div className="first-meeting">
-            <p className="section-overline">第一次见面</p>
-            <strong>
-              {person.firstMetOn
-                ? format(
-                    new Date(`${person.firstMetOn}T00:00:00`),
-                    'yyyy年M月d日',
-                  )
-                : '尚未记录'}
-            </strong>
-            {person.firstMetPlace ? <span>{person.firstMetPlace}</span> : null}
-            {person.firstMetStory ? <p>{person.firstMetStory}</p> : null}
-          </div>
-
-          <div className="identity-coach">
-            <div>
-              <Clock3 size={17} />
-              <span>{coach.label}</span>
-            </div>
-            <p>{coach.reason}</p>
-            <div className="identity-coach-actions">
-              <button type="button" onClick={() => openDialog('interaction')}>
-                记录互动
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updatePerson({
-                    snoozedUntil: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
-                  })
-                }
-              >
-                稍后 7 天
-              </button>
-            </div>
-          </div>
         </aside>
 
         <div className="dossier">
@@ -222,7 +162,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('interaction')}
                 >
-                  记录互动
+                  新增
                 </button>
               }
             />
@@ -277,50 +217,6 @@ export function PersonPage() {
             )}
           </section>
 
-          <section className="dossier-section dossier-intro">
-            <div>
-              <p className="section-overline">见面前，先看这里</p>
-              <h2>关系速写</h2>
-              <p>
-                {person.familySummary ||
-                  '还没有写下家庭近况。可以从一句自然的观察开始。'}
-              </p>
-            </div>
-            <div className="quick-facts">
-              <article>
-                <Target size={19} />
-                <span>在意的目标</span>
-                <strong>
-                  {bundle.goals.find((goal) => goal.status === 'active')?.title ??
-                    '尚未记录'}
-                </strong>
-              </article>
-              <article>
-                <CalendarClock size={19} />
-                <span>最近互动</span>
-                <strong>
-                  {bundle.interactions[0]?.occurredOn
-                    ? format(
-                        new Date(`${bundle.interactions[0].occurredOn}T00:00:00`),
-                        'M月d日',
-                      )
-                    : '还没有互动记录'}
-                </strong>
-              </article>
-              <article>
-                <CakeSlice size={19} />
-                <span>即将到来的日期</span>
-                <strong>
-                  {upcomingDates[0]
-                    ? `${upcomingDates[0].date.label} · ${upcomingDates[0].occurrence.date
-                        .slice(5)
-                        .replace('-', '/')}`
-                    : '30 天内没有'}
-                </strong>
-              </article>
-            </div>
-          </section>
-
           <section className="dossier-section">
             <SectionHeading
               icon={<Users size={19} />}
@@ -331,7 +227,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('family')}
                 >
-                  添加家庭成员
+                  编辑
                 </button>
               }
             />
@@ -368,6 +264,48 @@ export function PersonPage() {
 
           <section className="dossier-section">
             <SectionHeading
+              icon={<Glasses size={19} />}
+              title="职业"
+              actions={
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('career')}
+                >
+                  编辑
+                </button>
+              }
+            />
+            {person.careerSummary ? (
+              <p className="section-copy">{person.careerSummary}</p>
+            ) : null}
+            <div className="career-stack">
+              {bundle.careerEntries.map((entry) => (
+                <article key={entry.id}>
+                  <span>
+                    {entry.startedOn?.slice(0, 4) ?? ''}
+                    {entry.endedOn ? `—${entry.endedOn.slice(0, 4)}` : '—现在'}
+                  </span>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <p>{entry.organization}</p>
+                    {entry.note ? <small>{entry.note}</small> : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="row-edit-button career-edit"
+                    aria-label={`编辑职业经历${entry.title}`}
+                    onClick={() => openDialog('career', entry.id)}
+                  >
+                    编辑
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="dossier-section">
+            <SectionHeading
               icon={<CakeSlice size={19} />}
               title="重要日期"
               actions={
@@ -376,7 +314,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('date')}
                 >
-                  添加重要日期
+                  新增
                 </button>
               }
             />
@@ -411,80 +349,6 @@ export function PersonPage() {
 
           <section className="dossier-section">
             <SectionHeading
-              icon={<Glasses size={19} />}
-              title="职业与目标"
-              actions={
-                <>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => openDialog('career')}
-                  >
-                    添加职业经历
-                  </button>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => openDialog('goal')}
-                  >
-                    添加目标
-                  </button>
-                </>
-              }
-            />
-            {person.careerSummary ? (
-              <p className="section-copy">{person.careerSummary}</p>
-            ) : null}
-            <div className="career-stack">
-              {bundle.careerEntries.map((entry) => (
-                <article key={entry.id}>
-                  <span>
-                    {entry.startedOn?.slice(0, 4) ?? ''}
-                    {entry.endedOn ? `—${entry.endedOn.slice(0, 4)}` : '—现在'}
-                  </span>
-                  <div>
-                    <strong>{entry.title}</strong>
-                    <p>{entry.organization}</p>
-                    {entry.note ? <small>{entry.note}</small> : null}
-                  </div>
-                  <button
-                    type="button"
-                    className="row-edit-button career-edit"
-                    aria-label={`编辑职业经历${entry.title}`}
-                    onClick={() => openDialog('career', entry.id)}
-                  >
-                    编辑
-                  </button>
-                </article>
-              ))}
-            </div>
-            <div className="goal-strip">
-              {bundle.goals.map((goal) => (
-                <article key={goal.id}>
-                  <span className="goal-status">
-                    {goal.status === 'achieved'
-                      ? '已实现'
-                      : goal.status === 'paused'
-                        ? '已暂停'
-                        : '进行中'}
-                  </span>
-                  <strong>{goal.title}</strong>
-                  {goal.details ? <p>{goal.details}</p> : null}
-                  <button
-                    type="button"
-                    className="row-edit-button"
-                    aria-label={`编辑目标${goal.title}`}
-                    onClick={() => openDialog('goal', goal.id)}
-                  >
-                    编辑
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="dossier-section">
-            <SectionHeading
               icon={<HeartHandshake size={19} />}
               title="共同认识的人"
               actions={
@@ -493,7 +357,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('connection')}
                 >
-                  添加共同认识
+                  新增
                 </button>
               }
             />
@@ -554,7 +418,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('detail')}
                 >
-                  添加细节
+                  新增
                 </button>
               }
             />
@@ -592,35 +456,34 @@ export function PersonPage() {
 
           <section className="dossier-section">
             <SectionHeading
-              icon={<FileText size={19} />}
-              title="补充维度"
+              icon={<Users size={19} />}
+              title="第一次认识 / 见面"
               actions={
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => openDialog('custom')}
+                  onClick={() => openDialog('basic')}
                 >
-                  编辑补充资料
+                  编辑
                 </button>
               }
             />
-            <dl className="custom-grid">
-              {activeCustomFields.map((field) => {
-                const value = bundle.customValues.find(
-                  (item) => item.fieldId === field.id,
-                )
-                return (
-                  <div key={field.id}>
-                    <dt>{field.label}</dt>
-                    <dd>
-                      {Array.isArray(value?.value)
-                        ? value.value.join('、')
-                        : String(value?.value ?? '尚未填写')}
-                    </dd>
-                  </div>
-                )
-              })}
-            </dl>
+            {person.firstMetOn || person.firstMetPlace || person.firstMetStory ? (
+              <div className="first-meeting-dossier">
+                <strong>
+                  {person.firstMetOn
+                    ? format(
+                        new Date(`${person.firstMetOn}T00:00:00`),
+                        'yyyy年M月d日',
+                      )
+                    : '日期未记录'}
+                  {person.firstMetPlace ? ` · ${person.firstMetPlace}` : ''}
+                </strong>
+                <p>{person.firstMetStory || '还没有写下当时的经过。'}</p>
+              </div>
+            ) : (
+              <p className="empty-copy">还没有记录第一次认识或见面的经过。</p>
+            )}
           </section>
 
           <section className="dossier-section">
@@ -633,7 +496,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('notes')}
                 >
-                  编辑备注
+                  编辑
                 </button>
               }
             />
@@ -800,41 +663,6 @@ export function PersonPage() {
           }}
         />
       ) : null}
-      {dialog === 'goal' ? (
-        <GoalDialog
-          initial={
-            editingId
-              ? bundle.goals.find((item) => item.id === editingId)
-              : undefined
-          }
-          onClose={closeDialog}
-          onSave={(value) => {
-            update((current) => ({
-              ...current,
-              goals: editingId
-                ? current.goals.map((item) =>
-                    item.id === editingId ? { ...item, ...value } : item,
-                  )
-                : [
-                    ...current.goals,
-                    {
-                      ...value,
-                      id: `goal-${crypto.randomUUID()}`,
-                      personId: person.id,
-                    },
-                  ],
-            }))
-            closeDialog()
-          }}
-          onDelete={() => {
-            update((current) => ({
-              ...current,
-              goals: current.goals.filter((item) => item.id !== editingId),
-            }))
-            closeDialog()
-          }}
-        />
-      ) : null}
       {dialog === 'date' ? (
         <ImportantDateDialog
           initial={
@@ -917,26 +745,6 @@ export function PersonPage() {
               interactions: current.interactions.filter(
                 (item) => item.id !== editingId,
               ),
-            }))
-            closeDialog()
-          }}
-        />
-      ) : null}
-      {dialog === 'custom' ? (
-        <CustomValuesDialog
-          personId={person.id}
-          fields={activeCustomFields}
-          values={bundle.customValues}
-          onClose={closeDialog}
-          onSave={(values) => {
-            update((current) => ({
-              ...current,
-              customValues: [
-                ...current.customValues.filter(
-                  (item) => item.personId !== person.id,
-                ),
-                ...values,
-              ],
             }))
             closeDialog()
           }}
