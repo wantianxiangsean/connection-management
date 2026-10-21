@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { getSurnameInitial, sortBySurname } from './alphabet'
+import {
+  getSurnameInitial,
+  matchesPersonName,
+  sortBySurname,
+} from './alphabet'
 
 describe('surname alphabet hints', () => {
   it('uses the pinyin initial for Chinese surnames', () => {
@@ -22,6 +26,14 @@ describe('surname alphabet hints', () => {
       '林知秋',
       '周原',
     ])
+  })
+
+  it('matches names by fuzzy pinyin and pinyin initials', () => {
+    expect(matchesPersonName('沈禾', 'shenh')).toBe(true)
+    expect(matchesPersonName('沈禾', 'sh')).toBe(true)
+    expect(matchesPersonName('程华 Joanna', 'chj')).toBe(true)
+    expect(matchesPersonName('程华 Joanna', 'joa')).toBe(true)
+    expect(matchesPersonName('沈禾', 'lin')).toBe(false)
   })
 })
 

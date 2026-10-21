@@ -91,10 +91,11 @@ describe('archive application flow', () => {
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     const addButton = screen.getByRole('button', { name: '新增人员' })
-    const backupLink = screen.getByRole('link', { name: '备份' })
     const settingsLink = screen.getByRole('link', { name: '设置' })
-    expect(backupLink.parentElement).toBe(addButton.parentElement)
     expect(settingsLink.parentElement).toBe(addButton.parentElement)
+    expect(
+      screen.queryByRole('link', { name: '备份' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('banner', { name: '账户操作' }),
     ).not.toBeInTheDocument()
@@ -213,9 +214,14 @@ describe('archive application flow', () => {
       within(connectionSection).getByRole('button', { name: '新增' }),
     )
     const connectionDialog = screen.getByRole('dialog', { name: '添加共同认识' })
-    await user.selectOptions(
+    await user.type(
       within(connectionDialog).getByLabelText('选择档案中的人'),
-      'shen-he',
+      'sh',
+    )
+    await user.click(
+      await within(connectionDialog).findByRole('option', {
+        name: /沈禾/,
+      }),
     )
     await user.click(
       within(connectionDialog).getByRole('button', { name: '建立连接' }),

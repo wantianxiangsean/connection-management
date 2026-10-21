@@ -302,9 +302,10 @@ ul {
 
 .page-heading h1 {
   margin-top: 7px;
+  color: #e83e10;
   font-family: var(--display);
   font-size: clamp(2.5rem, 4vw, 4.5rem);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.055em;
   line-height: 1.08;
 }
@@ -322,7 +323,6 @@ ul {
   gap: 10px;
 }
 
-.backup-entry-button,
 .settings-entry-button {
   width: 42px;
   min-width: 42px;
@@ -333,7 +333,6 @@ ul {
   background: rgba(255, 255, 255, 0.46);
 }
 
-.backup-entry-button:hover,
 .settings-entry-button:hover {
   border-color: rgba(198, 103, 80, 0.34);
   color: var(--seal);
@@ -1767,6 +1766,80 @@ ul {
   text-align: center;
 }
 
+.person-combobox {
+  position: relative;
+}
+
+.person-combobox-input {
+  padding-left: 38px !important;
+}
+
+.person-combobox-icon {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  color: var(--ink-faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.person-combobox-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--paper-light);
+  box-shadow: 0 14px 30px rgba(36, 40, 32, 0.16);
+}
+
+.person-combobox-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.person-combobox-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.person-combobox-list li.is-active,
+.person-combobox-list li:hover {
+  color: var(--ink);
+  background: rgba(232, 62, 16, 0.07);
+}
+
+.person-combobox-list small {
+  color: var(--ink-faint);
+  font-size: 0.64rem;
+}
+
+.person-combobox-list .person-combobox-empty {
+  color: var(--ink-faint);
+  cursor: default;
+  line-height: 1.55;
+}
+
+.person-combobox-list .person-combobox-empty:hover {
+  color: var(--ink-faint);
+  background: transparent;
+}
+
+.person-combobox-clear {
+  justify-self: start;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
 .field-help {
   color: var(--ink-faint);
   font-size: 0.67rem;
@@ -2481,7 +2554,6 @@ button.data-action-card {
     flex: 1;
   }
 
-  .page-heading-actions .backup-entry-button,
   .page-heading-actions .settings-entry-button {
     width: 42px;
     flex: 0 0 42px;

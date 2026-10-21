@@ -2,7 +2,10 @@ import { expect, test } from '@playwright/test'
 
 test('owner can open and review a relationship profile without a login page', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: '155人脉管理' })).toBeVisible()
+  const heading = page.getByRole('heading', { name: '155人脉管理' })
+  await expect(heading).toBeVisible()
+  await expect(heading).toHaveCSS('color', 'rgb(232, 62, 16)')
+  await expect(heading).toHaveCSS('font-weight', '700')
   await expect(page.getByPlaceholder('187手机')).toHaveCount(0)
   await expect(page.getByPlaceholder('leeds')).toHaveCount(0)
   await page.getByRole('link', { name: '林知秋' }).click()
@@ -23,23 +26,19 @@ test('archive actions fit and place settings after add person', async ({ page })
     page.getByRole('banner', { name: '账户操作' }),
   ).toHaveCount(0)
   const addButton = page.getByRole('button', { name: '新增人员' })
-  const backup = page.getByRole('link', { name: '备份' })
   const settings = page.getByRole('link', { name: '设置' })
   const details = page.getByRole('button', { name: '收起资料' })
   const filters = page.locator('.table-filters')
   const tableFormat = filters.getByRole('button', { name: '表格格式' })
   await expect(addButton).toBeVisible()
-  await expect(backup).toBeVisible()
   await expect(settings).toBeVisible()
+  await expect(page.getByRole('link', { name: '备份' })).toHaveCount(0)
   await expect(details).toBeVisible()
   await expect(tableFormat).toBeVisible()
   const addBox = await addButton.boundingBox()
-  const backupBox = await backup.boundingBox()
   const settingsBox = await settings.boundingBox()
   expect(addBox).not.toBeNull()
-  expect(backupBox).not.toBeNull()
   expect(settingsBox).not.toBeNull()
-  expect(Math.abs(backupBox!.y - settingsBox!.y)).toBeLessThanOrEqual(1)
   expect(Math.abs(addBox!.y - settingsBox!.y)).toBeLessThanOrEqual(1)
   expect(addBox!.x + addBox!.width).toBeLessThanOrEqual(settingsBox!.x)
   expect(settingsBox!.x + settingsBox!.width).toBeLessThanOrEqual(
@@ -114,4 +113,25 @@ test('new person actions stay visible above the scroll area', async ({ page }) =
     element.scrollTop = element.scrollHeight
   })
   await expect(actions).toBeInViewport({ ratio: 1 })
+})
+
+test('finds a mutual contact by pinyin initials', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
+  await page.getByRole('link', { name: '林知秋' }).click()
+  await page.getByRole('heading', { name: '共同认识的人' }).waitFor()
+
+  const section = page.locator('section.dossier-section').filter({
+    has: page.getByRole('heading', { name: '共同认识的人' }),
+  })
+  await section.getByRole('button', { name: '新增' }).click()
+
+  const dialog = page.getByRole('dialog', { name: '添加共同认识' })
+  const picker = dialog.getByLabel('选择档案中的人')
+  await picker.fill('sh')
+  await expect(dialog.getByRole('option', { name: /沈禾/ })).toBeVisible()
+  await dialog.getByRole('option', { name: /沈禾/ }).click()
+  await dialog.getByRole('button', { name: '建立连接' }).click()
+
+  await expect(page.getByRole('link', { name: '沈禾' })).toBeVisible()
 })

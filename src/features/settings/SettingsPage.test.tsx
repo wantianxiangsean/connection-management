@@ -140,9 +140,8 @@ describe('settings workflows', () => {
     )
 
     await screen.findByRole('heading', { name: '155人脉管理' })
-    await user.click(screen.getByRole('link', { name: '备份' }))
+    await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
-    expect(window.location.hash).toBe('#/settings/cloud')
 
     expect(
       screen.queryByRole('heading', { name: '账户' }),

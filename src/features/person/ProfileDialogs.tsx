@@ -1,6 +1,17 @@
-import { useState, type FormEvent } from 'react'
+import {
+  useId,
+  useMemo,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import { useForm } from 'react-hook-form'
+import { Search } from 'lucide-react'
 import { DialogFrame } from '../../components/DialogFrame'
+import {
+  matchesPersonName,
+  sortBySurname,
+} from '../../domain/alphabet'
 import {
   channelLabels,
   tierLabels,
@@ -352,11 +363,70 @@ export function ConnectionDialog({
   onClose: () => void
   onSave: (target: { existingPersonId: string } | { newName: string }) => void
 }) {
-  const candidates = people.filter(
-    (item) => item.id !== person.id && !existingIds.includes(item.id),
+  const candidates = useMemo(
+    () =>
+      sortBySurname(
+        people.filter(
+          (item) => item.id !== person.id && !existingIds.includes(item.id),
+        ),
+      ),
+    [people, person.id, existingIds],
   )
-  const [existingPersonId, setExistingPersonId] = useState(candidates[0]?.id ?? '')
+  const [existingPersonId, setExistingPersonId] = useState('')
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
   const [newName, setNewName] = useState('')
+  const listId = useId()
+  const filteredCandidates = useMemo(
+    () => candidates.filter((candidate) =>
+      matchesPersonName(candidate.fullName, search),
+    ),
+    [candidates, search],
+  )
+  const selectedCandidate = candidates.find(
+    (candidate) => candidate.id === existingPersonId,
+  )
+  const activeCandidate = filteredCandidates[activeIndex]
+
+  function selectCandidate(candidate: Person) {
+    setExistingPersonId(candidate.id)
+    setSearch('')
+    setNewName('')
+    setOpen(false)
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setOpen(true)
+      setActiveIndex((current) =>
+        open
+          ? Math.max(
+              0,
+              Math.min(current + 1, filteredCandidates.length - 1),
+            )
+          : 0,
+      )
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setOpen(true)
+      setActiveIndex((current) =>
+        open ? Math.max(current - 1, 0) : filteredCandidates.length - 1,
+      )
+      return
+    }
+    if (event.key === 'Enter' && open && activeCandidate) {
+      event.preventDefault()
+      selectCandidate(activeCandidate)
+      return
+    }
+    if (event.key === 'Escape') {
+      setOpen(false)
+    }
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -369,21 +439,105 @@ export function ConnectionDialog({
       <form className="stack-form" onSubmit={submit}>
         <label>
           <span>选择档案中的人</span>
-          <select
-            value={existingPersonId}
-            onChange={(event) => {
-              setExistingPersonId(event.target.value)
-              setNewName('')
+          <div
+            className="person-combobox"
+            onBlur={(event) => {
+              if (
+                !event.currentTarget.contains(
+                  event.relatedTarget as Node | null,
+                )
+              ) {
+                setOpen(false)
+              }
             }}
           >
-            <option value="">不选择</option>
-            {candidates.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidate.fullName}
-                {candidate.kind === 'reference' ? '（引用人物）' : ''}
-              </option>
-            ))}
-          </select>
+            <Search
+              className="person-combobox-icon"
+              size={16}
+              aria-hidden="true"
+            />
+            <input
+              className="person-combobox-input"
+              role="combobox"
+              aria-label="选择档案中的人"
+              aria-autocomplete="list"
+              aria-expanded={open}
+              aria-controls={open ? listId : undefined}
+              aria-activedescendant={
+                open && activeCandidate
+                  ? `${listId}-${activeIndex}`
+                  : undefined
+              }
+              autoComplete="off"
+              value={
+                search || selectedCandidate?.fullName || ''
+              }
+              placeholder="输入姓名、姓名片段或拼音首字母"
+              onFocus={(event) => {
+                setOpen(true)
+                if (selectedCandidate) event.currentTarget.select()
+              }}
+              onClick={() => setOpen(true)}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setExistingPersonId('')
+                setNewName('')
+                setActiveIndex(0)
+                setOpen(true)
+              }}
+              onKeyDown={handleSearchKeyDown}
+            />
+            {open ? (
+              <ul
+                id={listId}
+                className="person-combobox-list"
+                role="listbox"
+                aria-label="可选联系人"
+              >
+                {filteredCandidates.length ? (
+                  filteredCandidates.map((candidate, index) => (
+                    <li
+                      id={`${listId}-${index}`}
+                      key={candidate.id}
+                      role="option"
+                      aria-selected={candidate.id === existingPersonId}
+                      className={
+                        index === activeIndex ? 'is-active' : undefined
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => selectCandidate(candidate)}
+                    >
+                      <span>{candidate.fullName}</span>
+                      {candidate.kind === 'reference' ? (
+                        <small>引用人物</small>
+                      ) : null}
+                    </li>
+                  ))
+                ) : (
+                  <li className="person-combobox-empty">
+                    没有匹配的姓名，可直接填写下方的非人脉姓名。
+                  </li>
+                )}
+              </ul>
+            ) : null}
+          </div>
+          {selectedCandidate ? (
+            <button
+              type="button"
+              className="text-button person-combobox-clear"
+              onClick={() => {
+                setExistingPersonId('')
+                setSearch('')
+                setOpen(true)
+              }}
+            >
+              清除选择
+            </button>
+          ) : null}
+          <small className="field-help">
+            支持姓名片段、全拼和拼音首字母，例如 shenhe、sh。
+          </small>
         </label>
         <p className="dialog-divider">或者，记下一个还不在人脉表里的人</p>
         <label>
@@ -392,7 +546,11 @@ export function ConnectionDialog({
             value={newName}
             onChange={(event) => {
               setNewName(event.target.value)
-              if (event.target.value) setExistingPersonId('')
+              if (event.target.value) {
+                setExistingPersonId('')
+                setSearch('')
+                setOpen(false)
+              }
             }}
             placeholder="例如：何叔叔"
           />

@@ -17,6 +17,33 @@ function surnameSortKey(fullName: string) {
     .toLocaleLowerCase('en')
 }
 
+function normalizedSearchText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[\s"'“”‘’·._-]+/g, '')
+    .toLocaleLowerCase('en')
+}
+
+export function matchesPersonName(fullName: string, query: string) {
+  const normalizedQuery = normalizedSearchText(query)
+  if (!normalizedQuery) return true
+
+  const pinyinOptions = {
+    toneType: 'none' as const,
+    type: 'array' as const,
+    nonZh: 'consecutive' as const,
+  }
+  const fullPinyin = pinyin(fullName, pinyinOptions).join('')
+  const initials = pinyin(fullName, {
+    ...pinyinOptions,
+    pattern: 'first',
+  }).join('')
+
+  return [fullName, fullPinyin, initials].some((value) =>
+    normalizedSearchText(value).includes(normalizedQuery),
+  )
+}
+
 export function getSurnameInitial(fullName: string) {
   const name = normalizedName(fullName)
   const first = name.slice(0, 1)

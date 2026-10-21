@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ChevronDown,
-  DatabaseBackup,
   Filter,
   Pencil,
   Plus,
@@ -401,14 +400,6 @@ export function ArchivePage() {
             <Plus size={18} aria-hidden="true" />
             新增人员
           </button>
-          <Link
-            to="/settings/cloud"
-            className="button backup-entry-button"
-            aria-label="备份"
-            title="备份"
-          >
-            <DatabaseBackup size={17} aria-hidden="true" />
-          </Link>
           <Link
             to="/settings"
             className="button settings-entry-button"
