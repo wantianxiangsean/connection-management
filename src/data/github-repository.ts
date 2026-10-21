@@ -40,10 +40,7 @@ export class GitHubRepository implements WorkspaceRepository {
   async load(forceRemote = false): Promise<DatabaseSnapshot> {
     const cached = this.storage.getItem(this.key)
     const token = this.getToken()
-    if (!token) {
-      if (cached) return JSON.parse(cached) as DatabaseSnapshot
-      return emptySnapshot()
-    }
+    if (!token) return emptySnapshot()
     if (cached && this.hasPendingCloud() && !forceRemote) {
       return JSON.parse(cached) as DatabaseSnapshot
     }
