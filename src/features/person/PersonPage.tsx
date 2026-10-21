@@ -68,6 +68,10 @@ export function PersonPage() {
   }
 
   const { person } = bundle
+  const familySummaryLines = person.familySummary
+    .split(/\r?\n|[；;]/)
+    .map((line) => line.trim())
+    .filter(Boolean)
 
   function updatePerson(patch: Partial<typeof person>) {
     update((current) => ({
@@ -220,7 +224,7 @@ export function PersonPage() {
           <section className="dossier-section">
             <SectionHeading
               icon={<Users size={19} />}
-              title="家庭"
+              title="家庭成员"
               actions={
                 <button
                   type="button"
@@ -231,11 +235,24 @@ export function PersonPage() {
                 </button>
               }
             />
-            {person.familySummary ? (
-              <p className="section-copy">{person.familySummary}</p>
-            ) : null}
-            {bundle.familyMembers.length ? (
-              <ul className="item-list">
+            {familySummaryLines.length || bundle.familyMembers.length ? (
+              <ul className="item-list family-member-list">
+                {familySummaryLines.map((line, index) => (
+                  <li key={`${line}-${index}`}>
+                    <button
+                      type="button"
+                      className="family-summary-row"
+                      aria-label={`编辑家庭概况：${line}`}
+                      onClick={() => openDialog('basic')}
+                    >
+                      <span className="list-initial">{line.slice(0, 1)}</span>
+                      <span className="family-summary-copy">
+                        <strong>{line}</strong>
+                      </span>
+                      <span className="row-edit-button">编辑</span>
+                    </button>
+                  </li>
+                ))}
                 {bundle.familyMembers.map((member) => (
                   <li key={member.id}>
                     <span className="list-initial">{member.name.slice(0, 1)}</span>
@@ -265,7 +282,7 @@ export function PersonPage() {
           <section className="dossier-section">
             <SectionHeading
               icon={<Glasses size={19} />}
-              title="职业"
+              title="学业/职业"
               actions={
                 <button
                   type="button"
@@ -287,8 +304,17 @@ export function PersonPage() {
                     {entry.endedOn ? `—${entry.endedOn.slice(0, 4)}` : '—现在'}
                   </span>
                   <div>
-                    <strong>{entry.title}</strong>
-                    <p>{entry.organization}</p>
+                    <strong>
+                      {entry.title ||
+                        entry.organization ||
+                        entry.school ||
+                        entry.major ||
+                        '未命名经历'}
+                    </strong>
+                    {entry.organization ? <p>{entry.organization}</p> : null}
+                    {entry.school || entry.major ? (
+                      <p>{[entry.school, entry.major].filter(Boolean).join(' · ')}</p>
+                    ) : null}
                     {entry.note ? <small>{entry.note}</small> : null}
                   </div>
                   <button

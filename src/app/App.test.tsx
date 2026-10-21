@@ -5,6 +5,7 @@ import { emptySnapshot } from '../domain/workspace'
 import { App } from './App'
 import { queryClient } from './WorkspaceContext'
 import { LocalRepository } from '../data/local-repository'
+import { createSampleSnapshot } from '../data/sample-data'
 
 describe('archive application flow', () => {
   beforeEach(() => {
@@ -303,8 +304,8 @@ describe('archive application flow', () => {
       .map((heading) => heading.textContent)
     expect(headings.slice(0, 8)).toEqual([
       '互动记录',
-      '家庭',
-      '职业',
+      '家庭成员',
+      '学业/职业',
       '重要日期',
       '共同认识的人',
       '谈过的细节',
@@ -322,8 +323,12 @@ describe('archive application flow', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByText('添加目标')).not.toBeInTheDocument()
 
-    const career = screen.getByRole('heading', { name: '职业' }).closest('section')!
-    const family = screen.getByRole('heading', { name: '家庭' }).closest('section')!
+    const career = screen
+      .getByRole('heading', { name: '学业/职业' })
+      .closest('section')!
+    const family = screen
+      .getByRole('heading', { name: '家庭成员' })
+      .closest('section')!
     const dates = screen.getByRole('heading', { name: '重要日期' }).closest('section')!
     const mutual = screen
       .getByRole('heading', { name: '共同认识的人' })
@@ -334,6 +339,115 @@ describe('archive application flow', () => {
     expect(within(dates).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(mutual).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(notes).getByRole('button', { name: '编辑' })).toBeInTheDocument()
+  })
+
+  it('captures school and major in the education and career history', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+
+    const careerSection = screen
+      .getByRole('heading', { name: '学业/职业' })
+      .closest('section')!
+    await user.click(
+      within(careerSection).getByRole('button', { name: '编辑' }),
+    )
+    const dialog = screen.getByRole('dialog', { name: '添加职业经历' })
+    await user.type(within(dialog).getByLabelText('毕业院校'), '清华大学')
+    await user.type(within(dialog).getByLabelText('专业'), '计算机科学')
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+
+    expect(await screen.findByText('清华大学 · 计算机科学')).toBeInTheDocument()
+  })
+
+  it('shows each family summary entry separately and opens it for editing', async () => {
+    const user = userEvent.setup()
+    const repository = new LocalRepository({
+      storage: localStorage,
+      key: 'app-test',
+      seed: true,
+    })
+    const snapshot = createSampleSnapshot()
+    snapshot.people[0].familySummary =
+      '两个孩子：\n大儿子2026年考上天津大学\n小儿子正在读初中'
+    await repository.save(snapshot)
+
+    render(<App repository={repository} />)
+
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    expect(
+      screen.getByRole('button', { name: '编辑家庭概况：大儿子2026年考上天津大学' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: '编辑家庭概况：小儿子正在读初中' }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: '编辑家庭概况：大儿子2026年考上天津大学' }),
+    )
+    expect(
+      screen.getByRole('dialog', { name: '编辑基本资料' }),
+    ).toBeInTheDocument()
+  })
+
+  it('uses the same family member management for close friends and acquaintances', async () => {
+    const user = userEvent.setup()
+    const repository = new LocalRepository({
+      storage: localStorage,
+      key: 'app-test',
+      seed: true,
+    })
+    const snapshot = createSampleSnapshot()
+    const acquaintance = snapshot.people.find(
+      (person) => person.id === 'gu-xiaofeng',
+    )!
+    acquaintance.familySummary = '有一个女儿\n父母住在深圳'
+    await repository.save(snapshot)
+
+    render(<App repository={repository} />)
+
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('tab', { name: /密友/ }))
+    await user.click(screen.getByRole('link', { name: '陈望川' }))
+    const closeFamily = screen
+      .getByRole('heading', { name: '家庭成员' })
+      .closest('section')!
+    expect(
+      within(closeFamily).getByRole('button', {
+        name: '编辑家庭成员豆沙',
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: '返回155人脉管理' }))
+    await user.click(screen.getByRole('tab', { name: /认识的人/ }))
+    await user.click(screen.getByRole('link', { name: '顾晓风' }))
+    const acquaintanceFamily = screen
+      .getByRole('heading', { name: '家庭成员' })
+      .closest('section')!
+    expect(
+      within(acquaintanceFamily).getByRole('button', {
+        name: '编辑家庭概况：有一个女儿',
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(acquaintanceFamily).getByRole('button', { name: '新增' }),
+    )
+    expect(
+      screen.getByRole('dialog', { name: '添加家庭成员' }),
+    ).toBeInTheDocument()
   })
 
   it('removes a mutual connection from either side of the relationship', async () => {

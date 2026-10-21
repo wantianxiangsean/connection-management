@@ -651,6 +651,8 @@ export function CareerDialog({
   onSave: (value: {
     organization: string
     title: string
+    school: string
+    major: string
     startedOn: string | null
     endedOn: string | null
     note: string
@@ -659,6 +661,8 @@ export function CareerDialog({
 }) {
   const [organization, setOrganization] = useState(initial?.organization ?? '')
   const [title, setTitle] = useState(initial?.title ?? '')
+  const [school, setSchool] = useState(initial?.school ?? '')
+  const [major, setMajor] = useState(initial?.major ?? '')
   const [startedOn, setStartedOn] = useState(initial?.startedOn ?? '')
   const [endedOn, setEndedOn] = useState(initial?.endedOn ?? '')
   const [note, setNote] = useState(initial?.note ?? '')
@@ -668,10 +672,19 @@ export function CareerDialog({
         className="stack-form"
         onSubmit={(event) => {
           event.preventDefault()
-          if (!organization.trim() && !title.trim()) return
+          if (
+            !organization.trim() &&
+            !title.trim() &&
+            !school.trim() &&
+            !major.trim()
+          ) {
+            return
+          }
           onSave({
             organization,
             title,
+            school,
+            major,
             startedOn: startedOn || null,
             endedOn: endedOn || null,
             note,
@@ -686,6 +699,14 @@ export function CareerDialog({
           <label>
             <span>职位</span>
             <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label>
+            <span>毕业院校</span>
+            <input value={school} onChange={(event) => setSchool(event.target.value)} />
+          </label>
+          <label>
+            <span>专业</span>
+            <input value={major} onChange={(event) => setMajor(event.target.value)} />
           </label>
           <label>
             <span>开始时间</span>

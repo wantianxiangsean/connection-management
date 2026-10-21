@@ -70,6 +70,8 @@ export interface CareerEntry {
   personId: string
   organization: string
   title: string
+  school?: string
+  major?: string
   startedOn: string | null
   endedOn: string | null
   note: string

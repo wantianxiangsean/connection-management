@@ -30,7 +30,19 @@ const bundle = {
     updatedAt: '',
   },
   familyMembers: [],
-  careerEntries: [],
+  careerEntries: [
+    {
+      id: 'c1',
+      personId: 'p1',
+      organization: '澄野科技',
+      title: '产品负责人',
+      school: '浙江大学',
+      major: '工业设计',
+      startedOn: '2021-03-01',
+      endedOn: null,
+      note: '',
+    },
+  ],
   goals: [{ id: 'g1', personId: 'p1', title: '筹备工作室', status: 'active' }],
   importantDates: [],
   detailEntries: [
@@ -62,5 +74,11 @@ describe('global profile search', () => {
   it('matches goals and hidden details', () => {
     expect(matchesPersonSearch(bundle, '工作室')).toBe(true)
     expect(matchesPersonSearch(bundle, '燕麦')).toBe(true)
+  })
+
+  it('matches education and career history', () => {
+    expect(matchesPersonSearch(bundle, '浙江大学')).toBe(true)
+    expect(matchesPersonSearch(bundle, '工业设计')).toBe(true)
+    expect(matchesPersonSearch(bundle, '产品负责人')).toBe(true)
   })
 })

@@ -17,6 +17,8 @@ export function matchesPersonSearch(bundle: PersonBundle, query: string) {
     ...bundle.careerEntries.flatMap((item) => [
       item.organization,
       item.title,
+      item.school ?? '',
+      item.major ?? '',
       item.note,
     ]),
     ...bundle.goals.flatMap((item) => [item.title, item.details ?? '']),

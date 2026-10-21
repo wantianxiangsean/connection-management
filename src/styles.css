@@ -1572,6 +1572,32 @@ body.column-resizing * {
   line-height: 1.8;
 }
 
+.family-summary-row {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  text-align: left;
+}
+
+.family-summary-row:hover {
+  color: var(--ink);
+}
+
+.family-summary-row:hover .row-edit-button {
+  border-color: var(--seal);
+  color: var(--seal);
+}
+
+.family-summary-copy {
+  min-width: 0;
+  flex: 1;
+}
+
 .notes-copy {
   white-space: pre-wrap;
 }
