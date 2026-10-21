@@ -31,6 +31,15 @@ describe('github private repository', () => {
     await expect(repository.getSession()).resolves.toBeNull()
   })
 
+  it('opens with an empty archive when no token is remembered', async () => {
+    const repository = new GitHubRepository({
+      storage: localStorage,
+      key: 'github-test',
+    })
+
+    await expect(repository.load()).resolves.toEqual(emptySnapshot())
+  })
+
   it('loads the private cloud workspace after validating the token', async () => {
     const snapshot = emptySnapshot()
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -88,5 +97,26 @@ describe('github private repository', () => {
       'Bearer valid-token',
     )
     expect(putCall?.[1]?.body).toContain('"message":"同步见微人脉档案"')
+  })
+
+  it('can keep a verified token only for the current session', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/user')) return jsonResponse({ login: 'owner' })
+      return jsonResponse({ private: true })
+    })
+    const repository = new GitHubRepository({
+      storage: localStorage,
+      key: 'github-test',
+      fetcher: fetchMock,
+    })
+
+    await repository.signIn('temporary-token', '', false)
+
+    await expect(repository.getSession()).resolves.toMatchObject({
+      id: 'owner',
+    })
+    expect(localStorage.getItem('github-test-github-token')).toBeNull()
+    expect(localStorage.getItem('github-test-session')).toBeNull()
   })
 })

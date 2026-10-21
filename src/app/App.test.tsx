@@ -10,7 +10,7 @@ describe('archive application flow', () => {
     window.location.hash = ''
   })
 
-  it('logs into the local archive and switches relationship tiers', async () => {
+  it('opens the local archive directly and switches relationship tiers', async () => {
     const user = userEvent.setup()
     render(
       <App
@@ -24,13 +24,12 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
 
     expect(
       await screen.findByRole('heading', { name: '155人脉管理' }),
     ).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('187手机')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('leeds')).not.toBeInTheDocument()
     expect(screen.queryByText('你的私人关系档案')).not.toBeInTheDocument()
     expect(
       screen.getByText(
@@ -59,7 +58,9 @@ describe('archive application flow', () => {
     await user.click(screen.getByRole('tab', { name: /认识的人/ }))
     expect(screen.getByText('顾晓风')).toBeInTheDocument()
     expect(screen.getByText('行业活动认识')).toBeInTheDocument()
-    expect(screen.getByText('品牌策略顾问')).toBeInTheDocument()
+    expect(
+      screen.getByText('消费品牌 · 品牌策略顾问'),
+    ).toBeInTheDocument()
     const acquaintanceList = screen.getByRole('list', {
       name: '认识的人名单',
     })
@@ -87,13 +88,12 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
 
-    const addButton = screen.getByRole('button', { name: '新增人物' })
+    const addButton = screen.getByRole('button', { name: '新增人员' })
+    const backupLink = screen.getByRole('link', { name: '备份' })
     const settingsLink = screen.getByRole('link', { name: '设置' })
+    expect(backupLink.parentElement).toBe(addButton.parentElement)
     expect(settingsLink.parentElement).toBe(addButton.parentElement)
     expect(
       screen.queryByRole('banner', { name: '账户操作' }),
@@ -110,33 +110,6 @@ describe('archive application flow', () => {
     )
   })
 
-  it('signs out from the settings page', async () => {
-    const user = userEvent.setup()
-    render(
-      <App
-        repository={
-          new LocalRepository({
-            storage: localStorage,
-            key: 'app-test',
-            seed: true,
-          })
-        }
-      />,
-    )
-
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
-    await screen.findByRole('heading', { name: '155人脉管理' })
-    await user.click(screen.getByRole('link', { name: '设置' }))
-    await screen.findByRole('heading', { name: '设置' })
-
-    await user.click(screen.getByRole('button', { name: '退出登录' }))
-    expect(
-      await screen.findByRole('button', { name: '登录' }),
-    ).toBeInTheDocument()
-  })
-
   it('searches hidden details and opens the holographic profile card', async () => {
     const user = userEvent.setup()
     render(
@@ -151,9 +124,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.type(
@@ -182,11 +152,8 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
-    await user.click(screen.getByRole('button', { name: '新增人物' }))
+    await user.click(screen.getByRole('button', { name: '新增人员' }))
 
     const dialog = screen.getByRole('dialog', { name: '先记下他是谁' })
     await user.type(within(dialog).getByLabelText('姓名'), '韩知')
@@ -211,9 +178,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -273,9 +237,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -311,7 +272,7 @@ describe('archive application flow', () => {
       .closest('section')!
     const notes = screen.getByRole('heading', { name: '备注' }).closest('section')!
     expect(within(career).getByRole('button', { name: '编辑' })).toBeInTheDocument()
-    expect(within(family).getByRole('button', { name: '编辑' })).toBeInTheDocument()
+    expect(within(family).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(dates).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(mutual).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(notes).getByRole('button', { name: '编辑' })).toBeInTheDocument()
@@ -331,9 +292,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -362,9 +320,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('tab', { name: /好友/ }))
     await user.click(screen.getByRole('link', { name: '周原' }))
@@ -389,9 +344,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     const coach = screen.getByRole('region', { name: '关系教练' })
 
@@ -422,9 +374,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('tab', { name: /好友/ }))
 
@@ -450,9 +399,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.click(screen.getByRole('button', { name: '收起资料' }))
@@ -482,9 +428,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.click(screen.getByRole('button', { name: '表格格式' }))
@@ -510,9 +453,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -551,9 +491,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -578,9 +515,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -621,9 +555,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -665,9 +596,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
@@ -691,9 +619,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
     const detailSection = screen
@@ -725,9 +650,6 @@ describe('archive application flow', () => {
       />,
     )
 
-    await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-    await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-    await user.click(screen.getByRole('button', { name: '登录' }))
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
     const detailSection = screen

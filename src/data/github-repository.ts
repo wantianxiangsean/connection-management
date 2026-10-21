@@ -1,4 +1,5 @@
 import type { Attachment, DatabaseSnapshot } from '../domain/types'
+import { emptySnapshot } from '../domain/workspace'
 import type {
   SessionUser,
   WorkspaceRepository,
@@ -21,6 +22,8 @@ export class GitHubRepository implements WorkspaceRepository {
   private path: string
   private branch: string
   private fetcher: typeof fetch
+  private transientToken: string | null = null
+  private transientUser: SessionUser | null = null
   private listeners = new Set<(user: SessionUser | null) => void>()
 
   constructor(options: GitHubRepositoryOptions = {}) {
@@ -35,10 +38,10 @@ export class GitHubRepository implements WorkspaceRepository {
 
   async load(): Promise<DatabaseSnapshot> {
     const cached = this.storage.getItem(this.key)
-    const token = this.storage.getItem(`${this.key}-github-token`)
+    const token = this.getToken()
     if (!token) {
       if (cached) return JSON.parse(cached) as DatabaseSnapshot
-      throw new Error('请先使用 GitHub Token 验证身份')
+      return emptySnapshot()
     }
 
     try {
@@ -64,7 +67,7 @@ export class GitHubRepository implements WorkspaceRepository {
   async save(snapshot: DatabaseSnapshot) {
     const serialized = JSON.stringify(snapshot)
     this.storage.setItem(this.key, serialized)
-    const token = this.storage.getItem(`${this.key}-github-token`)
+    const token = this.getToken()
     if (!token) return
 
     const content = encodeBase64(serialized)
@@ -77,7 +80,11 @@ export class GitHubRepository implements WorkspaceRepository {
     }
   }
 
-  async signIn(tokenInput: string): Promise<SessionUser> {
+  async signIn(
+    tokenInput: string,
+    _password = '',
+    remember = true,
+  ): Promise<SessionUser> {
     const token = tokenInput.trim()
     if (!token) throw new Error('请输入 GitHub Token')
 
@@ -101,20 +108,32 @@ export class GitHubRepository implements WorkspaceRepository {
     }
     const githubUser = (await userResponse.json()) as { login: string }
     const user = { id: githubUser.login, phone: githubUser.login }
-    this.storage.setItem(`${this.key}-github-token`, token)
-    this.storage.setItem(`${this.key}-session`, JSON.stringify(user))
+    if (remember) {
+      this.storage.setItem(`${this.key}-github-token`, token)
+      this.storage.setItem(`${this.key}-session`, JSON.stringify(user))
+      this.transientToken = null
+      this.transientUser = null
+    } else {
+      this.storage.removeItem(`${this.key}-github-token`)
+      this.storage.removeItem(`${this.key}-session`)
+      this.transientToken = token
+      this.transientUser = user
+    }
     this.listeners.forEach((listener) => listener(user))
     return user
   }
 
   async signOut() {
+    this.transientToken = null
+    this.transientUser = null
     this.storage.removeItem(`${this.key}-session`)
     this.storage.removeItem(`${this.key}-github-token`)
     this.listeners.forEach((listener) => listener(null))
   }
 
   async getSession() {
-    const token = this.storage.getItem(`${this.key}-github-token`)
+    if (this.transientToken && this.transientUser) return this.transientUser
+    const token = this.getToken()
     const value = this.storage.getItem(`${this.key}-session`)
     if (!token || !value) return null
     return JSON.parse(value) as SessionUser
@@ -148,6 +167,13 @@ export class GitHubRepository implements WorkspaceRepository {
 
   async getAttachmentUrl(path: string) {
     return path
+  }
+
+  private getToken() {
+    return (
+      this.transientToken ??
+      this.storage.getItem(`${this.key}-github-token`)
+    )
   }
 
   private api(path: string, token: string, init: RequestInit = {}) {

@@ -11,7 +11,11 @@ export interface WorkspaceRepository {
   mode: RepositoryMode
   load(): Promise<DatabaseSnapshot>
   save(snapshot: DatabaseSnapshot): Promise<void>
-  signIn(phone: string, password: string): Promise<SessionUser>
+  signIn(
+    identifier: string,
+    password: string,
+    remember?: boolean,
+  ): Promise<SessionUser>
   signOut(): Promise<void>
   getSession(): Promise<SessionUser | null>
   onAuthStateChange(callback: (user: SessionUser | null) => void): () => void

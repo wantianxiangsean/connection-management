@@ -5,14 +5,17 @@ import {
   DatabaseBackup,
   Download,
   FileUp,
+  KeyRound,
   LogOut,
   Plus,
   RotateCcw,
+  ShieldCheck,
   Trash2,
 } from 'lucide-react'
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { DialogFrame } from '../components/DialogFrame'
+import type { SessionUser } from '../data/repository'
 import type {
   CustomFieldDefinition,
   CustomFieldType,
@@ -42,7 +45,8 @@ const fieldTypeLabels: Record<CustomFieldType, string> = {
 }
 
 export function SettingsPage() {
-  const { snapshot, update, repository, user } = useWorkspace()
+  const { snapshot, update, repository } = useWorkspace()
+  const location = useLocation()
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [duplicateChoices, setDuplicateChoices] = useState<
@@ -50,13 +54,39 @@ export function SettingsPage() {
   >({})
   const [importMessage, setImportMessage] = useState('')
   const [exporting, setExporting] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
-  const [signOutError, setSignOutError] = useState('')
   const [clearRecycleOpen, setClearRecycleOpen] = useState(false)
   const [cloudBusy, setCloudBusy] = useState(false)
   const [cloudMessage, setCloudMessage] = useState('')
   const [cloudRestoreOpen, setCloudRestoreOpen] = useState(false)
+  const [cloudUser, setCloudUser] = useState<SessionUser | null>(null)
+  const [cloudToken, setCloudToken] = useState('')
+  const [rememberCloudToken, setRememberCloudToken] = useState(true)
+  const [cloudTokenBusy, setCloudTokenBusy] = useState(false)
+  const [cloudTokenError, setCloudTokenError] = useState('')
+  const [tokenFormOpen, setTokenFormOpen] = useState(false)
   const deleted = snapshot.people.filter((person) => person.deletedAt)
+
+  useEffect(() => {
+    if (repository.mode !== 'github') return
+    let active = true
+    void repository.getSession().then((session) => {
+      if (!active) return
+      setCloudUser(session)
+      setTokenFormOpen(!session)
+    })
+    return () => {
+      active = false
+    }
+  }, [repository])
+
+  useEffect(() => {
+    if (!location.pathname.endsWith('/cloud')) return
+    requestAnimationFrame(() => {
+      document
+        .getElementById('cloud')
+        ?.scrollIntoView?.({ block: 'start' })
+    })
+  }, [location.pathname])
 
   async function readCsv(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -169,16 +199,44 @@ export function SettingsPage() {
     }
   }
 
-  async function signOut() {
-    setSigningOut(true)
-    setSignOutError('')
+  async function verifyCloudToken(event: FormEvent) {
+    event.preventDefault()
+    setCloudTokenBusy(true)
+    setCloudTokenError('')
+    setCloudMessage('')
+    try {
+      const user = await repository.signIn(
+        cloudToken,
+        '',
+        rememberCloudToken,
+      )
+      setCloudUser(user)
+      setCloudToken('')
+      setTokenFormOpen(false)
+      setCloudMessage('GitHub Token 已验证，现在可以备份或恢复联系人。')
+    } catch (cause) {
+      setCloudTokenError(
+        cause instanceof Error ? cause.message : 'Token 验证失败，请重试',
+      )
+    } finally {
+      setCloudTokenBusy(false)
+    }
+  }
+
+  async function disconnectCloud() {
+    setCloudTokenBusy(true)
+    setCloudTokenError('')
     try {
       await repository.signOut()
+      setCloudUser(null)
+      setTokenFormOpen(true)
+      setCloudMessage('已从当前浏览器移除 GitHub Token。')
     } catch (cause) {
-      setSignOutError(
-        cause instanceof Error ? cause.message : '退出失败，请稍后重试',
+      setCloudTokenError(
+        cause instanceof Error ? cause.message : '无法移除 Token，请重试',
       )
-      setSigningOut(false)
+    } finally {
+      setCloudTokenBusy(false)
     }
   }
 
@@ -449,14 +507,108 @@ export function SettingsPage() {
           <div className="settings-section-heading">
             <div>
               <h2>云端备份</h2>
-              <p>联系人资料保存在私有 GitHub 仓库；每次编辑会自动同步。</p>
+              <p>
+                联系人资料保存在私有 GitHub 仓库。先验证有仓库访问权限的
+                Token，才能备份或恢复。
+              </p>
             </div>
           </div>
+          <form className="cloud-token-form" onSubmit={verifyCloudToken}>
+            <div className="cloud-connection-summary">
+              {cloudUser ? (
+                <ShieldCheck size={19} aria-hidden="true" />
+              ) : (
+                <KeyRound size={19} aria-hidden="true" />
+              )}
+              <div>
+                <strong>
+                  {cloudUser
+                    ? `已连接私有云端 · ${cloudUser.id}`
+                    : '验证 GitHub Token'}
+                </strong>
+                <span>
+                  {cloudUser
+                    ? '验证成功后，每次编辑会自动同步到这个私有仓库。'
+                    : 'Token 仅用于访问私有联系人数据仓库。'}
+                </span>
+              </div>
+              {cloudUser ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={cloudTokenBusy}
+                  onClick={disconnectCloud}
+                >
+                  <LogOut size={14} aria-hidden="true" />
+                  断开云端
+                </button>
+              ) : null}
+            </div>
+            {tokenFormOpen ? (
+              <div className="cloud-token-fields">
+                <label className="cloud-token-input">
+                  <span className="sr-only">GitHub Token</span>
+                  <span className="input-frame">
+                    <KeyRound size={16} aria-hidden="true" />
+                    <input
+                      name="github-token"
+                      type="password"
+                      autoComplete="off"
+                      placeholder="ghp_ 或 github_pat_"
+                      value={cloudToken}
+                      onChange={(event) => setCloudToken(event.target.value)}
+                      required
+                    />
+                  </span>
+                </label>
+                <label className="cloud-remember-token">
+                  <input
+                    type="checkbox"
+                    checked={rememberCloudToken}
+                    onChange={(event) =>
+                      setRememberCloudToken(event.target.checked)
+                    }
+                  />
+                  在此浏览器记住
+                </label>
+                <button
+                  type="submit"
+                  className="button primary"
+                  disabled={cloudTokenBusy}
+                >
+                  {cloudTokenBusy ? '正在验证…' : '验证 Token'}
+                </button>
+                {cloudUser ? (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setTokenFormOpen(false)}
+                  >
+                    取消更换
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="button ghost cloud-change-token"
+                onClick={() => setTokenFormOpen(true)}
+              >
+                <KeyRound size={15} aria-hidden="true" />
+                更换 Token
+              </button>
+            )}
+            {cloudTokenError ? (
+              <p className="form-error" role="alert">
+                {cloudTokenError}
+              </p>
+            ) : null}
+          </form>
           <div className="data-actions cloud-actions">
             <button
               type="button"
               className="data-action-card"
-              disabled={cloudBusy}
+              disabled={cloudBusy || !cloudUser}
               onClick={backupToCloud}
             >
               <DatabaseBackup size={21} />
@@ -466,7 +618,7 @@ export function SettingsPage() {
             <button
               type="button"
               className="data-action-card"
-              disabled={cloudBusy}
+              disabled={cloudBusy || !cloudUser}
               onClick={() => setCloudRestoreOpen(true)}
             >
               <Download size={21} />
@@ -533,35 +685,6 @@ export function SettingsPage() {
         ) : (
           <p className="empty-copy">回收站是空的。</p>
         )}
-      </section>
-
-      <section className="settings-section account-section" id="account">
-        <div className="settings-section-heading">
-          <div>
-            <h2>账户</h2>
-            <p>退出当前登录，不会删除已经保存的人脉资料。</p>
-          </div>
-          <button
-            type="button"
-            className="button ghost"
-            onClick={signOut}
-            disabled={signingOut}
-          >
-            <LogOut size={16} aria-hidden="true" />
-            {signingOut ? '正在退出…' : '退出登录'}
-          </button>
-        </div>
-        <div className="account-summary">
-          <div>
-            <span>当前账户</span>
-            <strong>{user.phone || '本地预览'}</strong>
-          </div>
-          {signOutError ? (
-            <p className="form-error" role="alert">
-              {signOutError}
-            </p>
-          ) : null}
-        </div>
       </section>
 
       {fieldDialogOpen ? (

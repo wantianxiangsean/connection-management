@@ -1,10 +1,18 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
+import { GitHubRepository } from '../../data/github-repository'
 import { LocalRepository } from '../../data/local-repository'
 
-async function signIn() {
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+async function openArchive() {
   const user = userEvent.setup()
   render(
     <App
@@ -17,9 +25,6 @@ async function signIn() {
       }
     />,
   )
-  await user.type(screen.getByPlaceholderText('187手机'), '13800138000')
-  await user.type(screen.getByPlaceholderText('leeds'), 'preview')
-  await user.click(screen.getByRole('button', { name: '登录' }))
   await screen.findByRole('heading', { name: '155人脉管理' })
   return user
 }
@@ -31,7 +36,7 @@ describe('settings workflows', () => {
   })
 
   it('adds a global custom dimension', async () => {
-    const user = await signIn()
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
 
@@ -44,7 +49,7 @@ describe('settings workflows', () => {
   })
 
   it('imports validated CSV contacts', async () => {
-    const user = await signIn()
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
 
@@ -61,7 +66,7 @@ describe('settings workflows', () => {
   })
 
   it('restores a soft-deleted person from the recycle bin', async () => {
-    const user = await signIn()
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '林知秋' }))
     await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
     const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
@@ -81,7 +86,7 @@ describe('settings workflows', () => {
   })
 
   it('permanently clears the recycle bin after confirmation', async () => {
-    const user = await signIn()
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '林知秋' }))
     await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
     const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
@@ -105,12 +110,53 @@ describe('settings workflows', () => {
   })
 
   it('deletes a custom dimension and its saved values', async () => {
-    const user = await signIn()
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
 
     await user.click(screen.getByRole('button', { name: '删除认识渠道' }))
 
     expect(screen.queryByText('认识渠道')).not.toBeInTheDocument()
+  })
+
+  it('verifies and remembers the cloud token inside cloud backup', async () => {
+    const user = userEvent.setup()
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith('/user')) {
+        return jsonResponse({ login: 'owner' })
+      }
+      return jsonResponse({ private: true })
+    })
+    render(
+      <App
+        repository={
+          new GitHubRepository({
+            storage: localStorage,
+            key: 'cloud-settings-test',
+            fetcher,
+          })
+        }
+      />,
+    )
+
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '备份' }))
+    await screen.findByRole('heading', { name: '设置' })
+    expect(window.location.hash).toBe('#/settings/cloud')
+
+    expect(
+      screen.queryByRole('heading', { name: '账户' }),
+    ).not.toBeInTheDocument()
+    const tokenInput = await screen.findByPlaceholderText('ghp_ 或 github_pat_')
+    expect(screen.getByLabelText('在此浏览器记住')).toBeChecked()
+    await user.type(tokenInput, 'github_pat_test')
+    await user.click(screen.getByRole('button', { name: '验证 Token' }))
+
+    expect(
+      await screen.findByText('已连接私有云端 · owner'),
+    ).toBeInTheDocument()
+    expect(
+      localStorage.getItem('cloud-settings-test-github-token'),
+    ).toBe('github_pat_test')
   })
 })

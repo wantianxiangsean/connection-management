@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ChevronDown,
+  DatabaseBackup,
   Filter,
   Pencil,
   Plus,
@@ -398,8 +399,16 @@ export function ArchivePage() {
         <div className="page-heading-actions">
           <button className="button primary" type="button" onClick={() => setAddOpen(true)}>
             <Plus size={18} aria-hidden="true" />
-            新增人物
+            新增人员
           </button>
+          <Link
+            to="/settings/cloud"
+            className="button backup-entry-button"
+            aria-label="备份"
+            title="备份"
+          >
+            <DatabaseBackup size={17} aria-hidden="true" />
+          </Link>
           <Link
             to="/settings"
             className="button settings-entry-button"
@@ -503,17 +512,6 @@ export function ArchivePage() {
                 onClick={toggleDetails}
               >
                 {showDetails ? '收起资料' : '显示更多资料'}
-              </button>
-            ) : null}
-            {!showCompactDirectory ? (
-              <button
-                type="button"
-                className="icon-text-button"
-                aria-expanded={tableEditing}
-                onClick={() => setTableEditing((value) => !value)}
-              >
-                <Pencil size={16} aria-hidden="true" />
-                表格格式
               </button>
             ) : null}
           </div>
@@ -620,7 +618,22 @@ export function ArchivePage() {
             <option value="medium">中</option>
             <option value="strong">强</option>
           </select>
-          {query ? <span className="search-context">正在全部层级中搜索</span> : null}
+          <div className="table-filter-actions">
+            {query ? (
+              <span className="search-context">正在全部层级中搜索</span>
+            ) : null}
+            {!showCompactDirectory ? (
+              <button
+                type="button"
+                className="icon-text-button"
+                aria-expanded={tableEditing}
+                onClick={() => setTableEditing((value) => !value)}
+              >
+                <Pencil size={16} aria-hidden="true" />
+                表格格式
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="archive-table-wrap">
@@ -654,7 +667,9 @@ export function ArchivePage() {
                           <strong>{person.fullName}</strong>
                           <small>{person.role || '角色未记录'}</small>
                           <small>
-                            {person.occupation || '职业未记录'}
+                            {[person.industry, person.occupation]
+                              .filter(Boolean)
+                              .join(' · ') || '行业与职业未记录'}
                           </small>
                         </span>
                       </Link>
@@ -702,7 +717,7 @@ export function ArchivePage() {
               <p>
                 {query
                   ? '换一个名字、职业或细节试试。'
-                  : '新增人物后，他会出现在这里。'}
+                  : '新增人员后，他会出现在这里。'}
               </p>
             </div>
           ) : null}

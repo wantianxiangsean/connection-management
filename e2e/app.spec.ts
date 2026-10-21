@@ -1,15 +1,10 @@
 import { expect, test } from '@playwright/test'
 
-test('owner can sign in and review a relationship profile', async ({ page }) => {
+test('owner can open and review a relationship profile without a login page', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByPlaceholder('187手机')).toBeVisible()
-  await expect(page.getByPlaceholder('leeds')).toBeVisible()
-
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
-
   await expect(page.getByRole('heading', { name: '155人脉管理' })).toBeVisible()
+  await expect(page.getByPlaceholder('187手机')).toHaveCount(0)
+  await expect(page.getByPlaceholder('leeds')).toHaveCount(0)
   await page.getByRole('link', { name: '林知秋' }).click()
   await expect(
     page.getByRole('main', { name: '林知秋的全息档案' }),
@@ -22,39 +17,34 @@ test('archive actions fit and place settings after add person', async ({ page })
   expect(viewport).not.toBeNull()
 
   await page.goto('/')
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
   await expect(page.getByRole('heading', { name: '155人脉管理' })).toBeVisible()
 
   await expect(
     page.getByRole('banner', { name: '账户操作' }),
   ).toHaveCount(0)
-  const addButton = page.getByRole('button', { name: '新增人物' })
+  const addButton = page.getByRole('button', { name: '新增人员' })
+  const backup = page.getByRole('link', { name: '备份' })
   const settings = page.getByRole('link', { name: '设置' })
   const details = page.getByRole('button', { name: '收起资料' })
-  const tableFormat = page.getByRole('button', { name: '表格格式' })
+  const filters = page.locator('.table-filters')
+  const tableFormat = filters.getByRole('button', { name: '表格格式' })
   await expect(addButton).toBeVisible()
+  await expect(backup).toBeVisible()
   await expect(settings).toBeVisible()
   await expect(details).toBeVisible()
   await expect(tableFormat).toBeVisible()
   const addBox = await addButton.boundingBox()
+  const backupBox = await backup.boundingBox()
   const settingsBox = await settings.boundingBox()
   expect(addBox).not.toBeNull()
+  expect(backupBox).not.toBeNull()
   expect(settingsBox).not.toBeNull()
+  expect(Math.abs(backupBox!.y - settingsBox!.y)).toBeLessThanOrEqual(1)
   expect(Math.abs(addBox!.y - settingsBox!.y)).toBeLessThanOrEqual(1)
   expect(addBox!.x + addBox!.width).toBeLessThanOrEqual(settingsBox!.x)
   expect(settingsBox!.x + settingsBox!.width).toBeLessThanOrEqual(
     viewport!.width + 1,
   )
-  const detailsBox = await details.boundingBox()
-  const tableFormatBox = await tableFormat.boundingBox()
-  expect(detailsBox).not.toBeNull()
-  expect(tableFormatBox).not.toBeNull()
-  expect(detailsBox!.x + detailsBox!.width).toBeLessThanOrEqual(
-    tableFormatBox!.x,
-  )
-
   const horizontalOverflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -
@@ -65,9 +55,6 @@ test('archive actions fit and place settings after add person', async ({ page })
 
 test('profile keeps settings off the contact detail page', async ({ page }) => {
   await page.goto('/')
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
   await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
   await page.getByRole('link', { name: '林知秋' }).click()
   await page.getByRole('main', { name: '林知秋的全息档案' }).waitFor()
@@ -86,9 +73,6 @@ test('profile keeps settings off the contact detail page', async ({ page }) => {
 test('collapsed relationship tabs use the compact card grid', async ({ page }) => {
   const viewport = page.viewportSize()!
   await page.goto('/')
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
   await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
   await page.getByRole('button', { name: '收起资料' }).click()
 
@@ -106,11 +90,8 @@ test('collapsed relationship tabs use the compact card grid', async ({ page }) =
 
 test('opens a newly saved contact profile', async ({ page }) => {
   await page.goto('/')
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
   await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
-  await page.getByRole('button', { name: '新增人物' }).click()
+  await page.getByRole('button', { name: '新增人员' }).click()
   await page.getByLabel('姓名').fill('韩知')
   await page.getByRole('button', { name: '保存', exact: true }).click()
 
@@ -121,11 +102,8 @@ test('opens a newly saved contact profile', async ({ page }) => {
 
 test('new person actions stay visible above the scroll area', async ({ page }) => {
   await page.goto('/')
-  await page.getByPlaceholder('187手机').fill('13800138000')
-  await page.getByPlaceholder('leeds').fill('preview')
-  await page.getByRole('button', { name: '登录' }).click()
   await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
-  await page.getByRole('button', { name: '新增人物' }).click()
+  await page.getByRole('button', { name: '新增人员' }).click()
 
   const dialog = page.getByRole('dialog', { name: '先记下他是谁' })
   const actions = dialog.locator('form footer')

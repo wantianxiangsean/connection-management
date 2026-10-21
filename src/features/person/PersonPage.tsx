@@ -227,7 +227,7 @@ export function PersonPage() {
                   className="text-button"
                   onClick={() => openDialog('family')}
                 >
-                  编辑
+                  新增
                 </button>
               }
             />
