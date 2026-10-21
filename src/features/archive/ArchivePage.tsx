@@ -436,6 +436,22 @@ export function ArchivePage() {
     return person[column as keyof Person] || '—'
   }
 
+  function isCellEmpty(person: Person, column: string) {
+    if (column === 'fullName' || column === 'coach') return false
+    if (column === 'influence') return !person.influence
+    if (column === 'intimacy') return !person.intimacy
+    if (column.startsWith('custom:')) {
+      const fieldId = column.slice('custom:'.length)
+      const value = snapshot.customValues.find(
+        (item) => item.personId === person.id && item.fieldId === fieldId,
+      )?.value
+      return Array.isArray(value)
+        ? value.length === 0
+        : value === undefined || value === null || String(value).trim() === ''
+    }
+    return !person[column as keyof Person]
+  }
+
   function renderTableRows() {
     let currentInitial = ''
     return filteredContacts.map((person) => {
@@ -455,6 +471,8 @@ export function ArchivePage() {
             {columns.map((column) => (
               <td
                 key={column}
+                data-column={column}
+                data-empty={isCellEmpty(person, column) ? 'true' : undefined}
                 data-label={
                   columnLabels[column] ??
                   snapshot.customFields.find(
@@ -584,7 +602,7 @@ export function ArchivePage() {
             {!query.trim() ? (
               <button
                 type="button"
-                className="icon-text-button"
+                className="icon-text-button archive-detail-toggle"
                 onClick={toggleDetails}
               >
                 {showDetails ? '收起资料' : '显示更多资料'}
@@ -733,7 +751,7 @@ export function ArchivePage() {
             </ul>
           ) : (
             <table
-              className="archive-table"
+              className={`archive-table${showDetails ? ' show-details' : ''}`}
               style={{
                 tableLayout: 'fixed',
                 minWidth: `${tableWidth}px`,
