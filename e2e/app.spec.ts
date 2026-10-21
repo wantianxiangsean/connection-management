@@ -37,7 +37,11 @@ test('archive actions fit and place settings after add person', async ({ page })
   await expect(settings).toBeVisible()
   await expect(page.getByRole('link', { name: '备份' })).toHaveCount(0)
   await expect(details).toBeVisible()
-  await expect(tableFormat).toBeVisible()
+  if (viewport!.width > 680) {
+    await expect(tableFormat).toBeVisible()
+  } else {
+    await expect(tableFormat).toHaveCount(0)
+  }
   const addBox = await addButton.boundingBox()
   const settingsBox = await settings.boundingBox()
   expect(addBox).not.toBeNull()
@@ -154,4 +158,48 @@ test('keeps the settings heading compact', async ({ page }) => {
 
   expect(metrics.fontSize).toBeLessThanOrEqual(44)
   expect(metrics.lineHeight).toBeLessThanOrEqual(metrics.fontSize)
+})
+
+test('resizes table columns by dragging the header boundary', async ({ page }) => {
+  const viewport = page.viewportSize()!
+  test.skip(viewport.width <= 680, 'Column resizing uses the desktop table layout')
+
+  await page.goto('/')
+  await page.getByRole('heading', { name: '155人脉管理' }).waitFor()
+  const formatButton = page.getByRole('button', { name: '表格格式' })
+  await formatButton.click()
+  await expect(formatButton).toHaveAttribute('aria-pressed', 'true')
+
+  const handle = page.getByRole('separator', {
+    name: '调整姓名与角色列宽',
+  })
+  const handleBox = await handle.boundingBox()
+  expect(handleBox).not.toBeNull()
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2,
+    handleBox!.y + handleBox!.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2 + 60,
+    handleBox!.y + handleBox!.height / 2,
+    { steps: 5 },
+  )
+  await page.mouse.up()
+
+  const columns = page.getByRole('table').locator('col')
+  await expect
+    .poll(() => columns.nth(0).evaluate((column) => column.style.width))
+    .toBe('280px')
+  await expect
+    .poll(() => columns.nth(1).evaluate((column) => column.style.width))
+    .toBe('100px')
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('archive-column-widths-v1')
+        return raw ? JSON.parse(raw) : null
+      }),
+    )
+    .toMatchObject({ fullName: 280, role: 100 })
 })

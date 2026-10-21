@@ -9,7 +9,13 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
-import { Fragment, useMemo, useState } from 'react'
+import {
+  Fragment,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { differenceInCalendarDays, format } from 'date-fns'
 import { getArchiveColumns } from '../../domain/archive'
@@ -178,6 +184,12 @@ export function ArchivePage() {
   const showCompactDirectory = !query.trim() && !showDetails
   const columnWidth = (column: string) =>
     columnWidths[column] ?? defaultColumnWidths[column] ?? 160
+  const columnLabel = (column: string) =>
+    columnLabels[column] ??
+    snapshot.customFields.find(
+      (field) => `custom:${field.id}` === column,
+    )?.label ??
+    '补充资料'
   const tableWidth = columns.reduce(
     (total, column) => total + columnWidth(column),
     0,
@@ -270,15 +282,88 @@ export function ArchivePage() {
     })
   }
 
-  function updateColumnWidth(column: string, width: number) {
-    const next = { ...columnWidths, [column]: width }
-    setColumnWidths(next)
-    localStorage.setItem('archive-column-widths-v1', JSON.stringify(next))
-  }
-
   function resetColumnWidths() {
     setColumnWidths({})
     localStorage.removeItem('archive-column-widths-v1')
+  }
+
+  function resizeColumnPair(
+    event: ReactPointerEvent<HTMLDivElement>,
+    index: number,
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    const leftColumn = columns[index]
+    const rightColumn = columns[index + 1]
+    if (!leftColumn || !rightColumn) return
+
+    const baseWidths = Object.fromEntries(
+      columns.map((column) => [column, columnWidth(column)]),
+    )
+    const pairWidth = baseWidths[leftColumn] + baseWidths[rightColumn]
+    const leftStart = baseWidths[leftColumn]
+    const startX = event.clientX
+    const minimum = Math.min(80, pairWidth / 2)
+
+    function persistWidths(nextLeft: number) {
+      const next = {
+        ...columnWidths,
+        [leftColumn]: nextLeft,
+        [rightColumn]: pairWidth - nextLeft,
+      }
+      setColumnWidths(next)
+      localStorage.setItem('archive-column-widths-v1', JSON.stringify(next))
+    }
+
+    function onPointerMove(pointerEvent: PointerEvent) {
+      const nextLeft = Math.max(
+        minimum,
+        Math.min(
+          pairWidth - minimum,
+          leftStart + pointerEvent.clientX - startX,
+        ),
+      )
+      persistWidths(Math.round(nextLeft))
+    }
+
+    function stopResize() {
+      document.body.classList.remove('column-resizing')
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', stopResize)
+      window.removeEventListener('pointercancel', stopResize)
+    }
+
+    document.body.classList.add('column-resizing')
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', stopResize)
+    window.addEventListener('pointercancel', stopResize)
+  }
+
+  function nudgeColumnPair(
+    event: KeyboardEvent<HTMLDivElement>,
+    index: number,
+  ) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const leftColumn = columns[index]
+    const rightColumn = columns[index + 1]
+    if (!leftColumn || !rightColumn) return
+    const left = columnWidth(leftColumn)
+    const right = columnWidth(rightColumn)
+    const pairWidth = left + right
+    const minimum = Math.min(80, pairWidth / 2)
+    const delta = event.key === 'ArrowLeft' ? -10 : 10
+    const nextLeft = Math.max(
+      minimum,
+      Math.min(pairWidth - minimum, left + delta),
+    )
+    const next = {
+      ...columnWidths,
+      [leftColumn]: nextLeft,
+      [rightColumn]: pairWidth - nextLeft,
+    }
+    setColumnWidths(next)
+    localStorage.setItem('archive-column-widths-v1', JSON.stringify(next))
   }
 
   function changeTier(nextTier: RelationshipTier) {
@@ -546,7 +631,7 @@ export function ArchivePage() {
         {tableEditing && !showCompactDirectory ? (
           <div className="column-width-panel">
             <div className="column-width-panel-heading">
-              <strong>调整列宽</strong>
+              <strong>拖动列边界调整宽度</strong>
               <button
                 type="button"
                 className="text-button"
@@ -555,33 +640,9 @@ export function ArchivePage() {
                 恢复默认
               </button>
             </div>
-            <div className="column-width-grid">
-              {columns.map((column) => {
-                const label =
-                  columnLabels[column] ??
-                  snapshot.customFields.find(
-                    (field) => `custom:${field.id}` === column,
-                  )?.label ??
-                  '补充资料'
-                return (
-                  <label key={column} className="column-width-control">
-                    <span>{label}</span>
-                    <input
-                      type="range"
-                      min="100"
-                      max="340"
-                      step="10"
-                      value={columnWidth(column)}
-                      aria-label={`${label}列宽`}
-                      onChange={(event) =>
-                        updateColumnWidth(column, Number(event.target.value))
-                      }
-                    />
-                    <output>{columnWidth(column)}px</output>
-                  </label>
-                )
-              })}
-            </div>
+            <p className="column-width-help">
+              将鼠标移到表头列边界并左右拖动。相邻列宽度会自动补偿，表格总宽保持不变。
+            </p>
           </div>
         ) : null}
 
@@ -616,8 +677,9 @@ export function ArchivePage() {
             {!showCompactDirectory ? (
               <button
                 type="button"
-                className="icon-text-button"
+                className="icon-text-button table-format-button"
                 aria-expanded={tableEditing}
+                aria-pressed={tableEditing}
                 onClick={() => setTableEditing((value) => !value)}
               >
                 <Pencil size={16} aria-hidden="true" />
@@ -687,13 +749,22 @@ export function ArchivePage() {
               </colgroup>
               <thead>
                 <tr>
-                  {columns.map((column) => (
+                  {columns.map((column, index) => (
                     <th key={column} scope="col">
-                      {columnLabels[column] ??
-                        snapshot.customFields.find(
-                          (field) => `custom:${field.id}` === column,
-                        )?.label ??
-                        '补充资料'}
+                      {columnLabel(column)}
+                      {tableEditing && index < columns.length - 1 ? (
+                        <div
+                          className="column-resize-handle"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`调整${columnLabel(column)}与${columnLabel(columns[index + 1])}列宽`}
+                          tabIndex={0}
+                          onPointerDown={(event) =>
+                            resizeColumnPair(event, index)
+                          }
+                          onKeyDown={(event) => nudgeColumnPair(event, index)}
+                        />
+                      ) : null}
                     </th>
                   ))}
                 </tr>

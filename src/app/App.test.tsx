@@ -472,7 +472,7 @@ describe('archive application flow', () => {
     expect(screen.getByRole('button', { name: '收起资料' })).toBeInTheDocument()
   })
 
-  it('adjusts table column widths from the table editing entry', async () => {
+  it('resizes table columns by dragging their boundary', async () => {
     const user = userEvent.setup()
     render(
       <App
@@ -489,12 +489,17 @@ describe('archive application flow', () => {
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.click(screen.getByRole('button', { name: '表格格式' }))
-    fireEvent.change(screen.getByRole('slider', { name: '姓名列宽' }), {
-      target: { value: '260' },
+    const handle = screen.getByRole('separator', {
+      name: '调整姓名与角色列宽',
     })
+    fireEvent.pointerDown(handle, { clientX: 220, pointerId: 1 })
+    fireEvent.pointerMove(window, { clientX: 280, pointerId: 1 })
+    fireEvent.pointerUp(window, { clientX: 280, pointerId: 1 })
 
     const table = screen.getByRole('table')
-    expect(table.querySelector('col')).toHaveStyle({ width: '260px' })
+    const columns = table.querySelectorAll('col')
+    expect(columns[0]).toHaveStyle({ width: '280px' })
+    expect(columns[1]).toHaveStyle({ width: '100px' })
   })
 
   it('adds an attachment while recording an interaction', async () => {
