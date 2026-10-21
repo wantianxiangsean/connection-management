@@ -1,11 +1,12 @@
+import { matchesPersonName } from './alphabet'
 import type { PersonBundle } from './types'
 
 export function matchesPersonSearch(bundle: PersonBundle, query: string) {
   const needle = query.trim().toLocaleLowerCase('zh-CN')
   if (!needle) return true
+  if (matchesPersonName(bundle.person.fullName, query)) return true
 
   const values: string[] = [
-    bundle.person.fullName,
     bundle.person.role,
     bundle.person.occupation,
     bundle.person.region,

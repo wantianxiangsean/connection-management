@@ -54,6 +54,8 @@ const bundle = {
 describe('global profile search', () => {
   it('matches names and core fields', () => {
     expect(matchesPersonSearch(bundle, '知秋')).toBe(true)
+    expect(matchesPersonSearch(bundle, 'lzq')).toBe(true)
+    expect(matchesPersonSearch(bundle, 'lin zhi qiu')).toBe(true)
     expect(matchesPersonSearch(bundle, '上海')).toBe(true)
   })
 

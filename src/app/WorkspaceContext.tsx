@@ -58,9 +58,23 @@ export function WorkspaceProvider({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [pending, setPending] = useState(false)
+  const snapshotRef = useRef<DatabaseSnapshot | null>(null)
+  const pendingRef = useRef(false)
+  const savingRef = useRef(false)
 
   useEffect(() => {
     if (query.data) {
+      const current = snapshotRef.current
+      if (
+        current &&
+        (pendingRef.current ||
+          savingRef.current ||
+          repository.hasPendingCloud?.())
+      ) {
+        void saveQueue.current?.enqueue(current)
+        return
+      }
+      snapshotRef.current = query.data
       setSnapshot(query.data)
       if (repository.hasPendingCloud?.()) {
         void saveQueue.current?.enqueue(query.data)
@@ -75,8 +89,14 @@ export function WorkspaceProvider({
       (cause) => {
         setError(cause instanceof Error ? cause.message : '保存失败，请稍后重试')
       },
-      setSaving,
-      setPending,
+      (value) => {
+        savingRef.current = value
+        setSaving(value)
+      },
+      (value) => {
+        pendingRef.current = value
+        setPending(value)
+      },
     )
   }
 
@@ -97,6 +117,7 @@ export function WorkspaceProvider({
           if (!current) return current
           const next = mutator(current)
           repository.cache?.(next)
+          snapshotRef.current = next
           void saveQueue.current?.enqueue(next)
           return next
         })

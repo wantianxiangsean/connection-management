@@ -8,6 +8,9 @@ test('owner can open and review a relationship profile without a login page', as
   await expect(heading).toHaveCSS('font-weight', '700')
   await expect(page.getByPlaceholder('187手机')).toHaveCount(0)
   await expect(page.getByPlaceholder('leeds')).toHaveCount(0)
+  await page
+    .getByPlaceholder('搜索姓名、姓名首字母、职业或某个细节')
+    .fill('lzq')
   await page.getByRole('link', { name: '林知秋' }).click()
   await expect(
     page.getByRole('main', { name: '林知秋的全息档案' }),
@@ -134,4 +137,21 @@ test('finds a mutual contact by pinyin initials', async ({ page }) => {
   await dialog.getByRole('button', { name: '建立连接' }).click()
 
   await expect(page.getByRole('link', { name: '沈禾' })).toBeVisible()
+})
+
+test('keeps the settings heading compact', async ({ page }) => {
+  await page.goto('/#/settings')
+  const heading = page.getByRole('heading', { name: '设置' })
+  await expect(heading).toBeVisible()
+
+  const metrics = await heading.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      lineHeight: Number.parseFloat(style.lineHeight),
+    }
+  })
+
+  expect(metrics.fontSize).toBeLessThanOrEqual(44)
+  expect(metrics.lineHeight).toBeLessThanOrEqual(metrics.fontSize)
 })

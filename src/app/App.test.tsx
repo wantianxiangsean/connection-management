@@ -1,12 +1,15 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { emptySnapshot } from '../domain/workspace'
 import { App } from './App'
+import { queryClient } from './WorkspaceContext'
 import { LocalRepository } from '../data/local-repository'
 
 describe('archive application flow', () => {
   beforeEach(() => {
     localStorage.clear()
+    queryClient.clear()
     window.location.hash = ''
   })
 
@@ -128,7 +131,9 @@ describe('archive application flow', () => {
     await screen.findByRole('heading', { name: '155人脉管理' })
 
     await user.type(
-      screen.getByPlaceholderText('搜索姓名、职业或某个细节'),
+      screen.getByPlaceholderText(
+        '搜索姓名、姓名首字母、职业或某个细节',
+      ),
       '燕麦',
     )
     const result = await screen.findByRole('link', { name: '林知秋' })
@@ -227,6 +232,53 @@ describe('archive application flow', () => {
       within(connectionDialog).getByRole('button', { name: '建立连接' }),
     )
     expect(await screen.findByRole('link', { name: '沈禾' })).toBeInTheDocument()
+  })
+
+  it('keeps unsynced edits when the workspace is fetched again', async () => {
+    class RefetchRaceRepository extends LocalRepository {
+      private loads = 0
+
+      override async load() {
+        this.loads += 1
+        return this.loads === 1 ? super.load() : emptySnapshot()
+      }
+    }
+
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new RefetchRaceRepository({
+            storage: localStorage,
+            key: 'refetch-race-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
+    const dialog = screen.getByRole('dialog', { name: '编辑基本资料' })
+    await user.clear(within(dialog).getByLabelText('角色'))
+    await user.type(
+      within(dialog).getByLabelText('角色'),
+      '本地待同步角色',
+    )
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+
+    expect(
+      screen.getByText('已保存到本机'),
+    ).toBeInTheDocument()
+    await queryClient.refetchQueries({
+      queryKey: ['workspace', 'local', 'archive-owner'],
+      exact: true,
+    })
+
+    expect(
+      await screen.findByRole('main', { name: '林知秋的全息档案' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('本地待同步角色')).toBeInTheDocument()
   })
 
   it('orders profile sections and replaces custom dimensions with first meeting', async () => {

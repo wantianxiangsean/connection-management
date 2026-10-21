@@ -483,7 +483,7 @@ export function ArchivePage() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索姓名、职业或某个细节"
+                placeholder="搜索姓名、姓名首字母、职业或某个细节"
               />
             </label>
             <button
