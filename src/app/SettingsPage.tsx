@@ -53,6 +53,9 @@ export function SettingsPage() {
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState('')
   const [clearRecycleOpen, setClearRecycleOpen] = useState(false)
+  const [cloudBusy, setCloudBusy] = useState(false)
+  const [cloudMessage, setCloudMessage] = useState('')
+  const [cloudRestoreOpen, setCloudRestoreOpen] = useState(false)
   const deleted = snapshot.people.filter((person) => person.deletedAt)
 
   async function readCsv(event: ChangeEvent<HTMLInputElement>) {
@@ -176,6 +179,38 @@ export function SettingsPage() {
         cause instanceof Error ? cause.message : '退出失败，请稍后重试',
       )
       setSigningOut(false)
+    }
+  }
+
+  async function backupToCloud() {
+    setCloudBusy(true)
+    setCloudMessage('')
+    try {
+      await repository.save(snapshot)
+      setCloudMessage('联系人资料已备份到私有云端。')
+    } catch (cause) {
+      setCloudMessage(
+        cause instanceof Error ? cause.message : '云端备份失败，请稍后重试',
+      )
+    } finally {
+      setCloudBusy(false)
+    }
+  }
+
+  async function restoreFromCloud() {
+    setCloudBusy(true)
+    setCloudMessage('')
+    try {
+      const restored = await repository.load()
+      update(() => restored)
+      setCloudRestoreOpen(false)
+      setCloudMessage('已从私有云端恢复联系人资料。')
+    } catch (cause) {
+      setCloudMessage(
+        cause instanceof Error ? cause.message : '云端恢复失败，请稍后重试',
+      )
+    } finally {
+      setCloudBusy(false)
     }
   }
 
@@ -409,6 +444,44 @@ export function SettingsPage() {
         ) : null}
       </section>
 
+      {repository.mode === 'github' ? (
+        <section className="settings-section" id="cloud">
+          <div className="settings-section-heading">
+            <div>
+              <h2>云端备份</h2>
+              <p>联系人资料保存在私有 GitHub 仓库；每次编辑会自动同步。</p>
+            </div>
+          </div>
+          <div className="data-actions cloud-actions">
+            <button
+              type="button"
+              className="data-action-card"
+              disabled={cloudBusy}
+              onClick={backupToCloud}
+            >
+              <DatabaseBackup size={21} />
+              <strong>{cloudBusy ? '正在处理…' : '立即备份'}</strong>
+              <span>把当前全部联系人写入私有云端</span>
+            </button>
+            <button
+              type="button"
+              className="data-action-card"
+              disabled={cloudBusy}
+              onClick={() => setCloudRestoreOpen(true)}
+            >
+              <Download size={21} />
+              <strong>从云端恢复</strong>
+              <span>用私有云端版本覆盖本机档案</span>
+            </button>
+          </div>
+          {cloudMessage ? (
+            <p className="success-note" role="status">
+              {cloudMessage}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="settings-section" id="recycle">
         <div className="settings-section-heading">
           <div>
@@ -546,6 +619,39 @@ export function SettingsPage() {
                 }}
               >
                 永久删除
+              </button>
+            </footer>
+          </div>
+        </DialogFrame>
+      ) : null}
+
+      {cloudRestoreOpen ? (
+        <DialogFrame
+          title="从云端恢复"
+          overline="私有数据"
+          onClose={() => setCloudRestoreOpen(false)}
+        >
+          <div className="stack-form confirmation-form">
+            <div>
+              <p>
+                云端版本会覆盖当前浏览器中的联系人资料，但不会删除云端备份。
+              </p>
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => setCloudRestoreOpen(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="button primary"
+                disabled={cloudBusy}
+                onClick={restoreFromCloud}
+              >
+                确认恢复
               </button>
             </footer>
           </div>

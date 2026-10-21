@@ -2311,6 +2311,10 @@ ul {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.cloud-actions {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .data-action-card {
   position: relative;
   display: grid;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { LocalRepository } from '../data/local-repository'
+import { GitHubRepository } from '../data/github-repository'
 import {
   isSupabaseConfigured,
   SupabaseRepository,
@@ -23,6 +24,9 @@ function createDefaultRepository(): WorkspaceRepository {
       import.meta.env.VITE_SUPABASE_URL,
       import.meta.env.VITE_SUPABASE_ANON_KEY,
     )
+  }
+  if (!import.meta.env.DEV) {
+    return new GitHubRepository()
   }
   return new LocalRepository()
 }

@@ -18,4 +18,19 @@ describe('login page', () => {
     expect(screen.queryByText(/微信/)).not.toBeInTheDocument()
     expect(screen.queryByText(/注册账号/)).not.toBeInTheDocument()
   })
+
+  it('uses a GitHub token instead of account credentials in GitHub mode', () => {
+    render(
+      <LoginPage
+        mode="github"
+        busy={false}
+        error={null}
+        onSignIn={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByPlaceholderText('ghp_ 或 github_pat_')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('187手机')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('leeds')).not.toBeInTheDocument()
+  })
 })

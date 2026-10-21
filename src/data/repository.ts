@@ -1,6 +1,6 @@
 import type { DatabaseSnapshot, Attachment } from '../domain/types'
 
-export type RepositoryMode = 'local' | 'supabase'
+export type RepositoryMode = 'local' | 'github' | 'supabase'
 
 export interface SessionUser {
   id: string
