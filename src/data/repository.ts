@@ -9,8 +9,10 @@ export interface SessionUser {
 
 export interface WorkspaceRepository {
   mode: RepositoryMode
-  load(): Promise<DatabaseSnapshot>
+  load(forceRemote?: boolean): Promise<DatabaseSnapshot>
   save(snapshot: DatabaseSnapshot): Promise<void>
+  cache?(snapshot: DatabaseSnapshot): void
+  hasPendingCloud?(): boolean
   signIn(
     identifier: string,
     password: string,

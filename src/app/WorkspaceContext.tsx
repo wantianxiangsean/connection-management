@@ -24,7 +24,9 @@ interface WorkspaceValue {
     mutator: (current: DatabaseSnapshot) => DatabaseSnapshot,
   ) => void
   saving: boolean
+  pending: boolean
   error: string | null
+  saveNow: () => Promise<void>
   repository: WorkspaceRepository
   user: SessionUser
 }
@@ -34,7 +36,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
     },
   },
 })
@@ -55,10 +57,16 @@ export function WorkspaceProvider({
   const [snapshot, setSnapshot] = useState<DatabaseSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [pending, setPending] = useState(false)
 
   useEffect(() => {
-    if (query.data) setSnapshot(query.data)
-  }, [query.data])
+    if (query.data) {
+      setSnapshot(query.data)
+      if (repository.hasPendingCloud?.()) {
+        void saveQueue.current?.enqueue(query.data)
+      }
+    }
+  }, [query.data, repository])
 
   const saveQueue = useRef<SaveQueue<DatabaseSnapshot> | null>(null)
   if (!saveQueue.current) {
@@ -66,13 +74,18 @@ export function WorkspaceProvider({
       (next) => repository.save(next),
       (cause) => {
         setError(cause instanceof Error ? cause.message : '保存失败，请稍后重试')
-        void queryClient.invalidateQueries({
-          queryKey: ['workspace', repository.mode, user.id],
-        })
       },
       setSaving,
+      setPending,
     )
   }
+
+  useEffect(
+    () => () => {
+      saveQueue.current?.dispose()
+    },
+    [],
+  )
 
   const value = useMemo<WorkspaceValue | null>(() => {
     if (!snapshot) return null
@@ -83,16 +96,22 @@ export function WorkspaceProvider({
         setSnapshot((current) => {
           if (!current) return current
           const next = mutator(current)
+          repository.cache?.(next)
           void saveQueue.current?.enqueue(next)
           return next
         })
       },
       saving,
+      pending,
       error,
+      saveNow: () => {
+        setError(null)
+        return saveQueue.current?.flush(snapshot) ?? Promise.resolve()
+      },
       repository,
       user,
     }
-  }, [snapshot, saving, error, repository, user])
+  }, [snapshot, saving, pending, error, repository, user])
 
   if (query.isError) {
     return (

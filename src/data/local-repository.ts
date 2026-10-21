@@ -26,7 +26,7 @@ export class LocalRepository implements WorkspaceRepository {
     this.seed = options.seed ?? true
   }
 
-  async load(): Promise<DatabaseSnapshot> {
+  async load(_forceRemote = false): Promise<DatabaseSnapshot> {
     const saved = this.storage.getItem(this.key)
     if (saved) return JSON.parse(saved) as DatabaseSnapshot
     const initial = this.seed ? createSampleSnapshot() : createEmptyLocalSnapshot()
@@ -35,6 +35,10 @@ export class LocalRepository implements WorkspaceRepository {
   }
 
   async save(snapshot: DatabaseSnapshot) {
+    this.storage.setItem(this.key, JSON.stringify(snapshot))
+  }
+
+  cache(snapshot: DatabaseSnapshot) {
     this.storage.setItem(this.key, JSON.stringify(snapshot))
   }
 

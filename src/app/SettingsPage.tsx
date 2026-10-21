@@ -8,6 +8,7 @@ import {
   KeyRound,
   LogOut,
   Plus,
+  RefreshCw,
   RotateCcw,
   ShieldCheck,
   Trash2,
@@ -45,7 +46,15 @@ const fieldTypeLabels: Record<CustomFieldType, string> = {
 }
 
 export function SettingsPage() {
-  const { snapshot, update, repository } = useWorkspace()
+  const {
+    snapshot,
+    update,
+    repository,
+    saving,
+    pending,
+    error,
+    saveNow,
+  } = useWorkspace()
   const location = useLocation()
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
@@ -244,8 +253,8 @@ export function SettingsPage() {
     setCloudBusy(true)
     setCloudMessage('')
     try {
-      await repository.save(snapshot)
-      setCloudMessage('联系人资料已备份到私有云端。')
+      await saveNow()
+      setCloudMessage('联系人资料已手动备份到私有云端。')
     } catch (cause) {
       setCloudMessage(
         cause instanceof Error ? cause.message : '云端备份失败，请稍后重试',
@@ -259,7 +268,7 @@ export function SettingsPage() {
     setCloudBusy(true)
     setCloudMessage('')
     try {
-      const restored = await repository.load()
+      const restored = await repository.load(true)
       update(() => restored)
       setCloudRestoreOpen(false)
       setCloudMessage('已从私有云端恢复联系人资料。')
@@ -508,9 +517,36 @@ export function SettingsPage() {
             <div>
               <h2>云端备份</h2>
               <p>
-                联系人资料保存在私有 GitHub 仓库。先验证有仓库访问权限的
-                Token，才能备份或恢复。
+                联系人资料保存在私有 GitHub 仓库。Token 验证通过后，自动同步
+                每 2 分钟合并写入一次，手动备份可随时立即写入。
               </p>
+            </div>
+          </div>
+          <div
+            className={`cloud-save-overview${error ? ' is-error' : ''}`}
+            role={error ? 'alert' : 'status'}
+          >
+            <RefreshCw
+              size={18}
+              aria-hidden="true"
+              className={saving ? 'is-spinning' : undefined}
+            />
+            <div>
+              <strong>
+                {error
+                  ? '自动备份需要处理'
+                  : saving
+                    ? '正在自动备份…'
+                    : pending
+                      ? '有修改，等待自动备份'
+                      : '自动备份已开启'}
+              </strong>
+              <span>
+                {error ??
+                  (pending
+                    ? '修改已保存在本机，云端将在 2 分钟内同步。'
+                    : '当前没有待同步修改；也可随时使用下方手动备份。')}
+              </span>
             </div>
           </div>
           <form className="cloud-token-form" onSubmit={verifyCloudToken}>
@@ -528,7 +564,7 @@ export function SettingsPage() {
                 </strong>
                 <span>
                   {cloudUser
-                    ? '验证成功后，每次编辑会自动同步到这个私有仓库。'
+                    ? '修改会在本机即时保存，并每 2 分钟合并同步到私有仓库。'
                     : 'Token 仅用于访问私有联系人数据仓库。'}
                 </span>
               </div>
@@ -612,8 +648,8 @@ export function SettingsPage() {
               onClick={backupToCloud}
             >
               <DatabaseBackup size={21} />
-              <strong>{cloudBusy ? '正在处理…' : '立即备份'}</strong>
-              <span>把当前全部联系人写入私有云端</span>
+              <strong>{cloudBusy ? '正在处理…' : '手动备份'}</strong>
+              <span>立即把当前全部联系人写入私有云端</span>
             </button>
             <button
               type="button"

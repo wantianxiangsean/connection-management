@@ -1,25 +1,40 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SaveQueue } from './save-queue'
 
 describe('snapshot save queue', () => {
-  it('serializes overlapping saves in update order', async () => {
-    let releaseFirst: (() => void) | undefined
-    const firstGate = new Promise<void>((resolve) => {
-      releaseFirst = resolve
-    })
-    const save = vi
-      .fn<(value: string) => Promise<void>>()
-      .mockImplementationOnce(() => firstGate)
-      .mockResolvedValue(undefined)
-    const queue = new SaveQueue(save)
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
-    const first = queue.enqueue('first')
-    const second = queue.enqueue('second')
-    await Promise.resolve()
+  it('batches edits and saves only the latest snapshot after two minutes', async () => {
+    vi.useFakeTimers()
+    const save = vi.fn<(value: string) => Promise<void>>().mockResolvedValue()
+    const queue = new SaveQueue(save, undefined, undefined, undefined, 120_000)
 
-    expect(save.mock.calls.map(([value]) => value)).toEqual(['first'])
-    releaseFirst!()
-    await Promise.all([first, second])
-    expect(save.mock.calls.map(([value]) => value)).toEqual(['first', 'second'])
+    queue.enqueue('first')
+    queue.enqueue('second')
+    queue.enqueue('latest')
+
+    expect(save).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(119_999)
+    expect(save).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(save).toHaveBeenCalledOnce()
+    expect(save).toHaveBeenCalledWith('latest')
+    queue.dispose()
+  })
+
+  it('saves pending edits immediately when a manual flush is requested', async () => {
+    vi.useFakeTimers()
+    const save = vi.fn<(value: string) => Promise<void>>().mockResolvedValue()
+    const queue = new SaveQueue(save, undefined, undefined, undefined, 120_000)
+
+    queue.enqueue('pending')
+    await queue.flush('manual')
+
+    expect(save).toHaveBeenCalledOnce()
+    expect(save).toHaveBeenCalledWith('manual')
+    queue.dispose()
   })
 })

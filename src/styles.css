@@ -2172,6 +2172,57 @@ ul {
   margin-top: 12px;
 }
 
+.cloud-save-overview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-left: 2px solid rgba(75, 130, 105, 0.46);
+  margin-bottom: 14px;
+  background: rgba(226, 239, 230, 0.48);
+  padding: 12px 14px;
+}
+
+.cloud-save-overview > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--moss);
+}
+
+.cloud-save-overview > div {
+  display: grid;
+  gap: 3px;
+}
+
+.cloud-save-overview strong {
+  font-family: var(--display);
+  font-size: 0.86rem;
+}
+
+.cloud-save-overview span {
+  color: var(--ink-faint);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.cloud-save-overview.is-error {
+  border-left-color: var(--seal);
+  background: var(--seal-light);
+}
+
+.cloud-save-overview.is-error > svg {
+  color: var(--seal);
+}
+
+.cloud-save-overview .is-spinning {
+  animation: cloud-save-spin 1s linear infinite;
+}
+
+@keyframes cloud-save-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .cloud-token-form {
   display: grid;
   gap: 12px;

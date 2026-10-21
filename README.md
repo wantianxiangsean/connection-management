@@ -9,9 +9,9 @@ pnpm install
 pnpm dev
 ```
 
-未配置 Supabase 时，应用会自动进入浏览器本地预览模式，并载入一组演示档案。该模式用于查看和测试，不提供多设备同步。正式使用必须连接 Supabase。
+开发模式未配置 Supabase 时，应用会自动进入浏览器本地预览模式，并载入一组演示档案。该模式用于查看和测试，不提供多设备同步。
 
-生产构建使用 GitHub 私有数据仓库模式。页面可以直接打开，不再经过独立登录页；联系人数据保存在 `wantianxiangsean/connection-management-data` 的私有 `workspace.json` 中。首次进行云端备份或恢复时，在“设置 → 云端备份”验证有仓库权限的 GitHub Token，并可按需勾选“在此浏览器记住”。勾选后 Token 保存在当前浏览器本地，未勾选时仅在当前会话生效，不会写入公开的 GitHub Pages 代码。开发模式仍使用本地演示仓库，便于测试。
+生产构建固定使用 GitHub 私有数据仓库模式。页面可以直接打开，不再经过独立登录页；联系人数据保存在 `wantianxiangsean/connection-management-data` 的私有 `workspace.json` 中。首次进行云端备份或恢复时，在“设置 → 云端备份”验证有 `Contents: Read and write` 权限的 GitHub Token，并可按需勾选“在此浏览器记住”。修改会立即缓存在本机，自动备份每 2 分钟合并写入一次；手动备份可随时立即写入。Token 不会写入公开的 GitHub Pages 代码。
 
 ```bash
 pnpm test

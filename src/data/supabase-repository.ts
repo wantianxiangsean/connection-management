@@ -23,7 +23,7 @@ export class SupabaseRepository implements WorkspaceRepository {
     this.client = createClient(url, anonKey)
   }
 
-  async load(): Promise<DatabaseSnapshot> {
+  async load(_forceRemote = false): Promise<DatabaseSnapshot> {
     const { data, error } = await this.client.rpc('load_connection_workspace')
     if (error) throw error
     return (data ?? emptyWorkspace()) as DatabaseSnapshot

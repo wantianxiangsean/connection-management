@@ -125,7 +125,10 @@ describe('settings workflows', () => {
       if (String(input).endsWith('/user')) {
         return jsonResponse({ login: 'owner' })
       }
-      return jsonResponse({ private: true })
+      return jsonResponse({
+        private: true,
+        permissions: { push: true },
+      })
     })
     render(
       <App
@@ -143,6 +146,10 @@ describe('settings workflows', () => {
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
 
+    expect(screen.getByText(/自动备份已开启/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /手动备份/ }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('heading', { name: '账户' }),
     ).not.toBeInTheDocument()

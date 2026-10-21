@@ -24,6 +24,7 @@ export class GitHubRepository implements WorkspaceRepository {
   private fetcher: typeof fetch
   private transientToken: string | null = null
   private transientUser: SessionUser | null = null
+  private saveTail: Promise<void> = Promise.resolve()
   private listeners = new Set<(user: SessionUser | null) => void>()
 
   constructor(options: GitHubRepositoryOptions = {}) {
@@ -36,12 +37,15 @@ export class GitHubRepository implements WorkspaceRepository {
     this.fetcher = options.fetcher ?? window.fetch.bind(window)
   }
 
-  async load(): Promise<DatabaseSnapshot> {
+  async load(forceRemote = false): Promise<DatabaseSnapshot> {
     const cached = this.storage.getItem(this.key)
     const token = this.getToken()
     if (!token) {
       if (cached) return JSON.parse(cached) as DatabaseSnapshot
       return emptySnapshot()
+    }
+    if (cached && this.hasPendingCloud() && !forceRemote) {
+      return JSON.parse(cached) as DatabaseSnapshot
     }
 
     try {
@@ -49,7 +53,7 @@ export class GitHubRepository implements WorkspaceRepository {
         `/repos/${this.repository}/contents/${encodeURIComponent(this.path)}?ref=${this.branch}`,
         token,
       )
-      if (response.status === 404 && cached) {
+      if (response.status === 404 && cached && !forceRemote) {
         return JSON.parse(cached) as DatabaseSnapshot
       }
       if (!response.ok) throw new Error('云端档案读取失败')
@@ -57,26 +61,55 @@ export class GitHubRepository implements WorkspaceRepository {
       if (!data.content) throw new Error('云端档案格式无效')
       const snapshot = JSON.parse(decodeBase64(data.content)) as DatabaseSnapshot
       this.storage.setItem(this.key, JSON.stringify(snapshot))
+      this.storage.removeItem(`${this.key}-pending-cloud`)
       return snapshot
     } catch (cause) {
-      if (cached) return JSON.parse(cached) as DatabaseSnapshot
+      if (cached && !forceRemote) {
+        return JSON.parse(cached) as DatabaseSnapshot
+      }
       throw cause
     }
   }
 
-  async save(snapshot: DatabaseSnapshot) {
+  save(snapshot: DatabaseSnapshot) {
+    const operation = this.saveTail.then(() => this.saveSnapshot(snapshot))
+    this.saveTail = operation.then(
+      () => undefined,
+      () => undefined,
+    )
+    return operation
+  }
+
+  cache(snapshot: DatabaseSnapshot) {
+    this.storage.setItem(this.key, JSON.stringify(snapshot))
+    this.storage.setItem(`${this.key}-pending-cloud`, '1')
+  }
+
+  hasPendingCloud() {
+    return this.storage.getItem(`${this.key}-pending-cloud`) === '1'
+  }
+
+  private async saveSnapshot(snapshot: DatabaseSnapshot) {
     const serialized = JSON.stringify(snapshot)
-    this.storage.setItem(this.key, serialized)
+    this.cache(snapshot)
     const token = this.getToken()
     if (!token) return
 
     const content = encodeBase64(serialized)
     let response = await this.putContents(token, content)
-    if (response.status === 409) {
-      response = await this.putContents(token, content, true)
+    for (
+      let retry = 1;
+      retry <= 3 && response.status === 409;
+      retry += 1
+    ) {
+      await delay(retry * 120)
+      response = await this.putContents(token, content)
     }
     if (!response.ok) {
-      throw new Error('云端备份失败，请检查 GitHub Token 权限')
+      throw await createGitHubWriteError(response)
+    }
+    if (this.storage.getItem(this.key) === serialized) {
+      this.storage.removeItem(`${this.key}-pending-cloud`)
     }
   }
 
@@ -97,9 +130,15 @@ export class GitHubRepository implements WorkspaceRepository {
     }
     const cloudRepository = (await repositoryResponse.json()) as {
       private?: boolean
+      permissions?: { push?: boolean }
     }
     if (!cloudRepository.private) {
       throw new Error('数据仓库必须是私有仓库')
+    }
+    if (cloudRepository.permissions?.push !== true) {
+      throw new Error(
+        'GitHub Token 缺少数据仓库写入权限，请使用 Contents: Read and write 权限。',
+      )
     }
 
     const userResponse = await this.api('/user', token)
@@ -190,7 +229,6 @@ export class GitHubRepository implements WorkspaceRepository {
   private async putContents(
     token: string,
     content: string,
-    refreshSha = false,
   ) {
     let sha: string | undefined
     const current = await this.api(
@@ -198,8 +236,19 @@ export class GitHubRepository implements WorkspaceRepository {
       token,
     )
     if (current.ok) {
-      sha = ((await current.json()) as { sha?: string }).sha
-    } else if (current.status !== 404 && !refreshSha) {
+      const currentFile = (await current.json()) as {
+        sha?: string
+        content?: string
+        encoding?: string
+      }
+      if (
+        currentFile.encoding === 'base64' &&
+        currentFile.content?.replace(/\s/g, '') === content
+      ) {
+        return new Response(null, { status: 200 })
+      }
+      sha = currentFile.sha
+    } else if (current.status !== 404) {
       return current
     }
     return this.api(
@@ -239,4 +288,43 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(file)
   })
+}
+
+function delay(milliseconds: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, milliseconds)
+  })
+}
+
+async function createGitHubWriteError(response: Response) {
+  let detail = ''
+  try {
+    const body = (await response.clone().json()) as { message?: string }
+    detail = body.message?.trim() ?? ''
+  } catch {
+    detail = ''
+  }
+
+  const reason =
+    response.status === 401
+      ? 'GitHub Token 已失效，请重新验证。'
+      : response.status === 403
+        ? 'GitHub 拒绝写入（403），请确认 Token 具有 Contents: Read and write 权限。'
+        : response.status === 404
+          ? '未找到云端数据文件（404），请确认数据仓库和 main 分支存在。'
+          : response.status === 409
+            ? '云端文件版本冲突（409），请稍后再次备份。'
+            : response.status === 422
+              ? 'GitHub 无法接受这次写入（422）。'
+              : response.status === 429
+                ? 'GitHub API 请求过于频繁（429），请稍后重试。'
+                : response.status >= 500
+                  ? `GitHub 服务暂时不可用（${response.status}），请稍后重试。`
+                  : `GitHub 写入失败（${response.status}）。`
+  const requestId = response.headers.get('x-github-request-id')
+  return new Error(
+    [reason, detail && `GitHub：${detail}`, requestId && `请求 ID：${requestId}`]
+      .filter(Boolean)
+      .join(' '),
+  )
 }
