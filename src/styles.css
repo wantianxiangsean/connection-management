@@ -1146,7 +1146,7 @@ body.column-resizing * {
 
 .segmented-options {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .segmented-options label {
@@ -1171,6 +1171,7 @@ body.column-resizing * {
   cursor: pointer;
   font-family: var(--font-ui);
   font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .segmented-options label:first-child span {
@@ -1196,6 +1197,10 @@ body.column-resizing * {
   display: grid;
   gap: 18px;
   grid-template-columns: 1fr 1fr;
+}
+
+.form-grid .form-span-2 {
+  grid-column: 1 / -1;
 }
 
 .stack-form footer {
@@ -1512,30 +1517,21 @@ body.column-resizing * {
   line-height: 1.8;
 }
 
-.family-summary-row {
-  display: flex;
-  width: 100%;
-  flex: 1;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 0;
+.career-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.career-summary p {
+  margin: 0;
   color: var(--ink-soft);
-  background: transparent;
-  text-align: left;
+  font-size: 0.9375rem;
+  line-height: 1.65;
 }
 
-.family-summary-row:hover {
+.career-summary .career-meta {
   color: var(--ink);
-}
-
-.family-summary-row:hover .row-edit-button {
-  border-color: var(--seal);
-  color: var(--seal);
-}
-
-.family-summary-copy {
-  min-width: 0;
-  flex: 1;
+  font-weight: 650;
 }
 
 .notes-copy {
@@ -1637,68 +1633,6 @@ body.column-resizing * {
 .date-list svg {
   margin-top: 2px;
   color: var(--brass);
-}
-
-.career-stack {
-  display: grid;
-  gap: 1px;
-  border-left: 1px solid var(--line);
-  margin-left: 4px;
-}
-
-.career-stack article {
-  position: relative;
-  display: grid;
-  gap: 16px;
-  border-bottom: 1px solid var(--line);
-  grid-template-columns: 96px 1fr;
-  padding: 0 38px 17px 20px;
-}
-
-.career-edit {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.career-stack article:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.career-stack article::before {
-  position: absolute;
-  top: 5px;
-  left: -3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--brass);
-  content: "";
-}
-
-.career-stack article > span {
-  color: var(--ink-faint);
-  font-size: 0.8125rem;
-}
-
-.career-stack strong {
-  color: var(--ink);
-  font-family: var(--display);
-  font-size: 0.9375rem;
-}
-
-.career-stack p,
-.career-stack small {
-  display: block;
-  margin-top: 4px;
-  color: var(--ink-soft);
-  font-size: 0.8125rem;
-}
-
-.career-stack small {
-  color: var(--ink-faint);
-  line-height: 1.6;
 }
 
 .goal-strip {
@@ -1971,6 +1905,32 @@ body.column-resizing * {
   color: var(--seal);
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.interaction-detail-link {
+  margin-top: 4px;
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+}
+
+.detail-interaction-links {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 8px 8px 0;
+  margin-top: 8px;
+  background: #fafbfa;
+  padding: 8px 10px;
+}
+
+.detail-interaction-links li {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.detail-interaction-links span {
+  margin-right: 6px;
+  color: var(--ink-faint);
 }
 
 .custom-grid {
@@ -2897,7 +2857,7 @@ button.data-action-card {
   .tier-tabs {
     display: grid;
     gap: 2px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     overflow: visible;
     padding: 3px;
   }
@@ -3020,27 +2980,12 @@ button.data-action-card {
   }
 
   .segmented-options {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .segmented-options label:nth-child(2) span {
-    border-right: 1px solid var(--line);
-    border-radius: 0 4px 4px 0;
-  }
-
-  .segmented-options label:nth-child(3) span {
-    border-top: 0;
-    border-radius: 0 0 0 4px;
-  }
-
-  .segmented-options label:nth-child(4) span {
-    border-top: 0;
-    border-radius: 0 0 4px;
-  }
-
-  .career-stack article {
-    gap: 7px;
-    grid-template-columns: 1fr;
+  .segmented-options span {
+    padding: 0 2px;
+    font-size: 0.8125rem;
   }
 
   .timeline article {
@@ -3050,6 +2995,22 @@ button.data-action-card {
 
   .timeline-date {
     gap: 7px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tier-tabs {
+    gap: 0;
+  }
+
+  .tier-tabs button {
+    gap: 0;
+    padding: 0 2px;
+    font-size: 0.75rem;
+  }
+
+  .tier-tabs button span {
+    display: none;
   }
 }
 

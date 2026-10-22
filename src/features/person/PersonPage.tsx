@@ -1,8 +1,8 @@
 import {
   ArrowLeft,
+  Briefcase,
   CakeSlice,
   FileText,
-  Glasses,
   HeartHandshake,
   MessageCircleMore,
   Pencil,
@@ -27,13 +27,13 @@ import {
 import { useWorkspace } from '../../app/WorkspaceContext'
 import {
   BasicProfileDialog,
-  CareerDialog,
+  CareerSummaryDialog,
   ConnectionDialog,
   DetailDialog,
-  FamilyDialog,
   ImportantDateDialog,
   InteractionDialog,
   NotesDialog,
+  SummaryDialog,
 } from './ProfileDialogs'
 import { ResolvedAttachmentLink } from '../../components/ResolvedAsset'
 
@@ -41,8 +41,8 @@ type DialogName =
   | 'basic'
   | 'detail'
   | 'connection'
-  | 'family'
-  | 'career'
+  | 'family-summary'
+  | 'career-summary'
   | 'date'
   | 'interaction'
   | 'notes'
@@ -68,10 +68,6 @@ export function PersonPage() {
   }
 
   const { person } = bundle
-  const familySummaryLines = person.familySummary
-    .split(/\r?\n|[；;]/)
-    .map((line) => line.trim())
-    .filter(Boolean)
 
   function updatePerson(patch: Partial<typeof person>) {
     update((current) => ({
@@ -128,13 +124,20 @@ export function PersonPage() {
           </div>
           <h1>{person.fullName}</h1>
           <p className="identity-role">{person.role || '还没写下角色'}</p>
-          <p className="identity-occupation">
-            {person.occupation || '职业未记录'}
-            {person.region ? ` · ${person.region}` : ''}
-          </p>
           {person.industry ? (
             <p className="identity-industry">{person.industry}</p>
           ) : null}
+          {person.school || person.major ? (
+            <p className="identity-industry">
+              {[person.school, person.major].filter(Boolean).join(' · ')}
+            </p>
+          ) : null}
+          <p className="identity-occupation">
+            {person.company || person.occupation
+              ? [person.company, person.occupation].filter(Boolean).join(' · ')
+              : '职务未记录'}
+            {person.region ? ` · ${person.region}` : ''}
+          </p>
 
           <dl className="identity-stats">
             <div>
@@ -172,47 +175,60 @@ export function PersonPage() {
             />
             {bundle.interactions.length ? (
               <ul className="item-list interaction-list">
-                {bundle.interactions.map((interaction) => (
-                  <li key={interaction.id}>
-                    <span className="list-initial">
-                      {channelLabels[interaction.channel].slice(0, 1)}
-                    </span>
-                    <div>
-                      <strong>
-                        {interaction.occurredOn} ·{' '}
-                        {channelLabels[interaction.channel]}
-                      </strong>
-                      <p>{interaction.summary}</p>
-                      {bundle.attachments.some(
-                        (attachment) =>
-                          attachment.interactionId === interaction.id,
-                      ) ? (
-                        <div className="interaction-attachments">
-                          {bundle.attachments
-                            .filter(
-                              (attachment) =>
-                                attachment.interactionId === interaction.id,
-                            )
-                            .map((attachment) => (
-                              <ResolvedAttachmentLink
-                                key={attachment.id}
-                                attachment={attachment}
-                                repository={repository}
-                              />
-                            ))}
-                        </div>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="row-edit-button"
-                      aria-label={`编辑互动${interaction.occurredOn}`}
-                      onClick={() => openDialog('interaction', interaction.id)}
-                    >
-                      编辑
-                    </button>
-                  </li>
-                ))}
+                {bundle.interactions.map((interaction) => {
+                  const linkedDetail = interaction.detailEntryId
+                    ? bundle.detailEntries.find(
+                        (item) => item.id === interaction.detailEntryId,
+                      )
+                    : null
+                  return (
+                    <li key={interaction.id}>
+                      <span className="list-initial">
+                        {channelLabels[interaction.channel].slice(0, 1)}
+                      </span>
+                      <div>
+                        <strong>
+                          {interaction.occurredOn} ·{' '}
+                          {channelLabels[interaction.channel]}
+                        </strong>
+                        <p>{interaction.summary}</p>
+                        {linkedDetail ? (
+                          <p className="interaction-detail-link">
+                            关联细节 · {linkedDetail.category}：
+                            {linkedDetail.content}
+                          </p>
+                        ) : null}
+                        {bundle.attachments.some(
+                          (attachment) =>
+                            attachment.interactionId === interaction.id,
+                        ) ? (
+                          <div className="interaction-attachments">
+                            {bundle.attachments
+                              .filter(
+                                (attachment) =>
+                                  attachment.interactionId === interaction.id,
+                              )
+                              .map((attachment) => (
+                                <ResolvedAttachmentLink
+                                  key={attachment.id}
+                                  attachment={attachment}
+                                  repository={repository}
+                                />
+                              ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="row-edit-button"
+                        aria-label={`编辑互动${interaction.occurredOn}`}
+                        onClick={() => openDialog('interaction', interaction.id)}
+                      >
+                        编辑
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
               <p className="empty-copy">
@@ -221,112 +237,112 @@ export function PersonPage() {
             )}
           </section>
 
-          <section className="dossier-section">
+          <section className="dossier-section timeline-section">
             <SectionHeading
-              icon={<Users size={19} />}
-              title="家庭成员"
+              icon={<MessageCircleMore size={19} />}
+              title="谈过的细节"
               actions={
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => openDialog('family')}
+                  onClick={() => openDialog('detail')}
                 >
                   新增
                 </button>
               }
             />
-            {familySummaryLines.length || bundle.familyMembers.length ? (
-              <ul className="item-list family-member-list">
-                {familySummaryLines.map((line, index) => (
-                  <li key={`${line}-${index}`}>
-                    <button
-                      type="button"
-                      className="family-summary-row"
-                      aria-label={`编辑家庭概况：${line}`}
-                      onClick={() => openDialog('basic')}
-                    >
-                      <span className="list-initial">{line.slice(0, 1)}</span>
-                      <span className="family-summary-copy">
-                        <strong>{line}</strong>
-                      </span>
-                      <span className="row-edit-button">编辑</span>
-                    </button>
-                  </li>
-                ))}
-                {bundle.familyMembers.map((member) => (
-                  <li key={member.id}>
-                    <span className="list-initial">{member.name.slice(0, 1)}</span>
-                    <div>
-                      <strong>
-                        {member.name}
-                        {member.relation ? ` · ${member.relation}` : ''}
-                      </strong>
-                      {member.note ? <p>{member.note}</p> : null}
+            <div className="timeline">
+              {bundle.detailEntries.map((detail) => {
+                const linkedInteractions = bundle.interactions.filter(
+                  (interaction) => interaction.detailEntryId === detail.id,
+                )
+                return (
+                  <article key={detail.id}>
+                    <div className="timeline-date">
+                      <strong>{detail.observedOn.slice(5).replace('-', '.')}</strong>
+                      <span>{detail.observedOn.slice(0, 4)}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="row-edit-button"
-                      aria-label={`编辑家庭成员${member.name}`}
-                      onClick={() => openDialog('family', member.id)}
-                    >
-                      编辑
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="empty-copy">还没有记录家庭成员。</p>
-            )}
+                    <div className="timeline-content">
+                      <span className="detail-category">{detail.category}</span>
+                      <p>{detail.content}</p>
+                      {detail.followUpOn ? (
+                        <small>回访提醒 · {detail.followUpOn}</small>
+                      ) : null}
+                      {linkedInteractions.length ? (
+                        <ul className="detail-interaction-links">
+                          {linkedInteractions.map((interaction) => (
+                            <li key={interaction.id}>
+                              <span>
+                                {interaction.occurredOn} ·{' '}
+                                {channelLabels[interaction.channel]}
+                              </span>
+                              {interaction.summary}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="row-edit-button"
+                        aria-label={`编辑细节${detail.category}`}
+                        onClick={() => openDialog('detail', detail.id)}
+                      >
+                        编辑
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+              {!bundle.detailEntries.length ? (
+                <p className="empty-copy">
+                  第一次记录，可以从今天聊天里最真实的一句话开始。
+                </p>
+              ) : null}
+            </div>
           </section>
 
           <section className="dossier-section">
             <SectionHeading
-              icon={<Glasses size={19} />}
-              title="学业/职业"
+              icon={<HeartHandshake size={19} />}
+              title="家庭概况"
               actions={
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => openDialog('career')}
+                  onClick={() => openDialog('family-summary')}
                 >
                   编辑
                 </button>
               }
             />
-            {person.careerSummary ? (
-              <p className="section-copy">{person.careerSummary}</p>
-            ) : null}
-            <div className="career-stack">
-              {bundle.careerEntries.map((entry) => (
-                <article key={entry.id}>
-                  <span>
-                    {entry.startedOn?.slice(0, 4) ?? ''}
-                    {entry.endedOn ? `—${entry.endedOn.slice(0, 4)}` : '—现在'}
-                  </span>
-                  <div>
-                    <strong>
-                      {entry.title ||
-                        entry.organization ||
-                        entry.school ||
-                        entry.major ||
-                        '未命名经历'}
-                    </strong>
-                    {entry.organization ? <p>{entry.organization}</p> : null}
-                    {entry.school || entry.major ? (
-                      <p>{[entry.school, entry.major].filter(Boolean).join(' · ')}</p>
-                    ) : null}
-                    {entry.note ? <small>{entry.note}</small> : null}
-                  </div>
-                  <button
-                    type="button"
-                    className="row-edit-button career-edit"
-                    aria-label={`编辑职业经历${entry.title}`}
-                    onClick={() => openDialog('career', entry.id)}
-                  >
-                    编辑
-                  </button>
-                </article>
-              ))}
+            <p className="section-copy notes-copy">
+              {person.familySummary || '还没有记录家庭概况。'}
+            </p>
+          </section>
+
+          <section className="dossier-section">
+            <SectionHeading
+              icon={<Briefcase size={19} />}
+              title="职业概况"
+              actions={
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => openDialog('career-summary')}
+                >
+                  编辑
+                </button>
+              }
+            />
+            <div className="career-summary">
+              {person.company || person.occupation ? (
+                <p className="career-meta">
+                  {[person.company, person.occupation].filter(Boolean).join(' · ')}
+                </p>
+              ) : null}
+              <p className="notes-copy">
+                {person.careerSummary || '还没有记录职业概况。'}
+              </p>
             </div>
           </section>
 
@@ -434,52 +450,6 @@ export function PersonPage() {
             </div>
           </section>
 
-          <section className="dossier-section timeline-section">
-            <SectionHeading
-              icon={<MessageCircleMore size={19} />}
-              title="谈过的细节"
-              actions={
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => openDialog('detail')}
-                >
-                  新增
-                </button>
-              }
-            />
-            <div className="timeline">
-              {bundle.detailEntries.map((detail) => (
-                <article key={detail.id}>
-                  <div className="timeline-date">
-                    <strong>{detail.observedOn.slice(5).replace('-', '.')}</strong>
-                    <span>{detail.observedOn.slice(0, 4)}</span>
-                  </div>
-                  <div className="timeline-content">
-                    <span className="detail-category">{detail.category}</span>
-                    <p>{detail.content}</p>
-                    {detail.followUpOn ? (
-                      <small>回访提醒 · {detail.followUpOn}</small>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="row-edit-button"
-                      aria-label={`编辑细节${detail.category}`}
-                      onClick={() => openDialog('detail', detail.id)}
-                    >
-                      编辑
-                    </button>
-                  </div>
-                </article>
-              ))}
-              {!bundle.detailEntries.length ? (
-                <p className="empty-copy">
-                  第一次记录，可以从今天聊天里最真实的一句话开始。
-                </p>
-              ) : null}
-            </div>
-          </section>
-
           <section className="dossier-section">
             <SectionHeading
               icon={<Users size={19} />}
@@ -562,6 +532,7 @@ export function PersonPage() {
           onClose={closeDialog}
           onSave={(value, interactions) => {
             const timestamp = new Date().toISOString()
+            const detailId = editingId ?? `detail-${crypto.randomUUID()}`
             update((current) => ({
               ...current,
               detailEntries: editingId
@@ -574,7 +545,7 @@ export function PersonPage() {
                     ...current.detailEntries,
                     {
                       ...value,
-                      id: `detail-${crypto.randomUUID()}`,
+                      id: detailId,
                       createdAt: timestamp,
                       updatedAt: timestamp,
                     },
@@ -587,6 +558,7 @@ export function PersonPage() {
                   occurredOn: interaction.occurredOn,
                   channel: 'meeting' as const,
                   summary: interaction.summary,
+                  detailEntryId: detailId,
                 })),
               ],
             }))
@@ -611,80 +583,6 @@ export function PersonPage() {
           onClose={closeDialog}
           onSave={(target) => {
             update((current) => addConnection(current, person.id, target))
-            closeDialog()
-          }}
-        />
-      ) : null}
-      {dialog === 'family' ? (
-        <FamilyDialog
-          initial={
-            editingId
-              ? bundle.familyMembers.find((item) => item.id === editingId)
-              : undefined
-          }
-          onClose={closeDialog}
-          onSave={(value) => {
-            update((current) => ({
-              ...current,
-              familyMembers: editingId
-                ? current.familyMembers.map((item) =>
-                    item.id === editingId ? { ...item, ...value } : item,
-                  )
-                : [
-                    ...current.familyMembers,
-                    {
-                      ...value,
-                      id: `family-${crypto.randomUUID()}`,
-                      personId: person.id,
-                    },
-                  ],
-            }))
-            closeDialog()
-          }}
-          onDelete={() => {
-            update((current) => ({
-              ...current,
-              familyMembers: current.familyMembers.filter(
-                (item) => item.id !== editingId,
-              ),
-            }))
-            closeDialog()
-          }}
-        />
-      ) : null}
-      {dialog === 'career' ? (
-        <CareerDialog
-          initial={
-            editingId
-              ? bundle.careerEntries.find((item) => item.id === editingId)
-              : undefined
-          }
-          onClose={closeDialog}
-          onSave={(value) => {
-            update((current) => ({
-              ...current,
-              careerEntries: editingId
-                ? current.careerEntries.map((item) =>
-                    item.id === editingId ? { ...item, ...value } : item,
-                  )
-                : [
-                    ...current.careerEntries,
-                    {
-                      ...value,
-                      id: `career-${crypto.randomUUID()}`,
-                      personId: person.id,
-                    },
-                  ],
-            }))
-            closeDialog()
-          }}
-          onDelete={() => {
-            update((current) => ({
-              ...current,
-              careerEntries: current.careerEntries.filter(
-                (item) => item.id !== editingId,
-              ),
-            }))
             closeDialog()
           }}
         />
@@ -774,6 +672,25 @@ export function PersonPage() {
             }))
             closeDialog()
           }}
+        />
+      ) : null}
+      {dialog === 'family-summary' ? (
+        <SummaryDialog
+          title="编辑家庭概况"
+          label="家庭概况"
+          initial={person.familySummary}
+          placeholder="家庭成员、居住情况或最近近况"
+          onClose={closeDialog}
+          onSave={(familySummary) => updatePerson({ familySummary })}
+        />
+      ) : null}
+      {dialog === 'career-summary' ? (
+        <CareerSummaryDialog
+          initialCompany={person.company ?? ''}
+          initialOccupation={person.occupation}
+          initialSummary={person.careerSummary}
+          onClose={closeDialog}
+          onSave={(value) => updatePerson(value)}
         />
       ) : null}
       {dialog === 'notes' ? (

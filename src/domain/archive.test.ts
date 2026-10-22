@@ -27,6 +27,7 @@ describe('archive column behavior', () => {
       close: '密友',
       friend: '好友',
       acquaintance: '认识的人',
+      weak: '弱连接',
     })
   })
 })

@@ -16,11 +16,9 @@ import {
   channelLabels,
   tierLabels,
   type CalendarType,
-  type CareerEntry,
   type CustomFieldDefinition,
   type CustomFieldValue,
   type DetailEntry,
-  type FamilyMember,
   type Goal,
   type GoalStatus,
   type ImportantDate,
@@ -50,15 +48,15 @@ export function BasicProfileDialog({
       fullName: person.fullName,
       tier: person.tier ?? 'friend',
       role: person.role,
-      occupation: person.occupation,
       region: person.region,
       industry: person.industry,
       influence: person.influence ?? '',
       intimacy: person.intimacy ?? '',
+      influenceNote: person.influenceNote,
+      intimacyNote: person.intimacyNote,
       cadenceDays: person.cadenceDays ?? '',
-      familySummary: person.familySummary,
-      careerSummary: person.careerSummary,
-      firstMetOn: person.firstMetOn ?? '',
+      school: person.school ?? '',
+      major: person.major ?? '',
       firstMetPlace: person.firstMetPlace,
       firstMetStory: person.firstMetStory,
     },
@@ -73,7 +71,6 @@ export function BasicProfileDialog({
             fullName: values.fullName.trim(),
             tier: values.tier,
             role: values.role,
-            occupation: values.occupation,
             region: values.region,
             industry: values.industry,
             influence:
@@ -84,11 +81,12 @@ export function BasicProfileDialog({
               values.intimacy === ''
                 ? null
                 : (values.intimacy as Person['intimacy']),
+            influenceNote: values.influenceNote,
+            intimacyNote: values.intimacyNote,
             cadenceDays:
               values.cadenceDays === '' ? null : Number(values.cadenceDays),
-            familySummary: values.familySummary,
-            careerSummary: values.careerSummary,
-            firstMetOn: values.firstMetOn || null,
+            school: values.school,
+            major: values.major,
             firstMetPlace: values.firstMetPlace,
             firstMetStory: values.firstMetStory,
           }),
@@ -114,16 +112,20 @@ export function BasicProfileDialog({
             <input {...register('role')} placeholder="老同事、导师…" />
           </label>
           <label>
-            <span>职业</span>
-            <input {...register('occupation')} />
-          </label>
-          <label>
             <span>地区</span>
             <input {...register('region')} />
           </label>
-          <label>
+          <label className="form-span-2">
             <span>行业</span>
             <input {...register('industry')} />
+          </label>
+          <label>
+            <span>毕业院校</span>
+            <input {...register('school')} />
+          </label>
+          <label>
+            <span>专业</span>
+            <input {...register('major')} />
           </label>
           <label>
             <span>影响力</span>
@@ -143,6 +145,14 @@ export function BasicProfileDialog({
               <option value="close">密</option>
             </select>
           </label>
+          <label>
+            <span>影响力备注</span>
+            <input {...register('influenceNote')} placeholder="为什么这样判断" />
+          </label>
+          <label>
+            <span>亲密度备注</span>
+            <input {...register('intimacyNote')} placeholder="相处的真实感受" />
+          </label>
         </div>
         <label>
           <span>手动联系周期（天）</span>
@@ -154,20 +164,8 @@ export function BasicProfileDialog({
           />
           <small className="field-help">没有默认周期。只有你填写后才会出现到期提醒。</small>
         </label>
-        <label>
-          <span>家庭概况</span>
-          <textarea {...register('familySummary')} rows={3} />
-        </label>
-        <label>
-          <span>职业概况</span>
-          <textarea {...register('careerSummary')} rows={3} />
-        </label>
         <div className="form-grid">
-          <label>
-            <span>第一次见面日期</span>
-            <input {...register('firstMetOn')} type="date" />
-          </label>
-          <label>
+          <label className="form-span-2">
             <span>第一次见面地点</span>
             <input {...register('firstMetPlace')} />
           </label>
@@ -564,174 +562,6 @@ export function ConnectionDialog({
           </button>
           <button type="submit" className="button primary" disabled={!existingPersonId && !newName.trim()}>
             建立连接
-          </button>
-        </footer>
-      </form>
-    </DialogFrame>
-  )
-}
-
-export function FamilyDialog({
-  initial,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  initial?: FamilyMember
-  onClose: () => void
-  onSave: (value: { name: string; relation: string; birthday: string | null; note: string }) => void
-  onDelete?: () => void
-}) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [relation, setRelation] = useState(initial?.relation ?? '')
-  const [birthday, setBirthday] = useState(initial?.birthday ?? '')
-  const [note, setNote] = useState(initial?.note ?? '')
-  return (
-    <DialogFrame title={initial ? '编辑家庭成员' : '添加家庭成员'} onClose={onClose}>
-      <form
-        className="stack-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (!name.trim()) return
-          onSave({ name, relation, birthday: birthday || null, note })
-        }}
-      >
-        <div className="form-grid">
-          <label>
-            <span>姓名或称呼</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} required />
-          </label>
-          <label>
-            <span>关系</span>
-            <input
-              value={relation}
-              onChange={(event) => setRelation(event.target.value)}
-              placeholder="女儿、伴侣、家里的猫…"
-            />
-          </label>
-        </div>
-        <label>
-          <span>生日</span>
-          <input
-            type="date"
-            value={birthday}
-            onChange={(event) => setBirthday(event.target.value)}
-          />
-        </label>
-        <label>
-          <span>近况</span>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} />
-        </label>
-        <footer>
-          {initial && onDelete ? (
-            <button type="button" className="danger-text-button" onClick={onDelete}>
-              删除
-            </button>
-          ) : null}
-          <button type="button" className="button ghost" onClick={onClose}>
-            取消
-          </button>
-          <button type="submit" className="button primary">
-            保存
-          </button>
-        </footer>
-      </form>
-    </DialogFrame>
-  )
-}
-
-export function CareerDialog({
-  initial,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  initial?: CareerEntry
-  onClose: () => void
-  onSave: (value: {
-    organization: string
-    title: string
-    school: string
-    major: string
-    startedOn: string | null
-    endedOn: string | null
-    note: string
-  }) => void
-  onDelete?: () => void
-}) {
-  const [organization, setOrganization] = useState(initial?.organization ?? '')
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [school, setSchool] = useState(initial?.school ?? '')
-  const [major, setMajor] = useState(initial?.major ?? '')
-  const [startedOn, setStartedOn] = useState(initial?.startedOn ?? '')
-  const [endedOn, setEndedOn] = useState(initial?.endedOn ?? '')
-  const [note, setNote] = useState(initial?.note ?? '')
-  return (
-    <DialogFrame title={initial ? '编辑职业经历' : '添加职业经历'} onClose={onClose}>
-      <form
-        className="stack-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (
-            !organization.trim() &&
-            !title.trim() &&
-            !school.trim() &&
-            !major.trim()
-          ) {
-            return
-          }
-          onSave({
-            organization,
-            title,
-            school,
-            major,
-            startedOn: startedOn || null,
-            endedOn: endedOn || null,
-            note,
-          })
-        }}
-      >
-        <div className="form-grid">
-          <label>
-            <span>公司</span>
-            <input value={organization} onChange={(event) => setOrganization(event.target.value)} />
-          </label>
-          <label>
-            <span>职位</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            <span>毕业院校</span>
-            <input value={school} onChange={(event) => setSchool(event.target.value)} />
-          </label>
-          <label>
-            <span>专业</span>
-            <input value={major} onChange={(event) => setMajor(event.target.value)} />
-          </label>
-          <label>
-            <span>开始时间</span>
-            <input type="date" value={startedOn} onChange={(event) => setStartedOn(event.target.value)} />
-          </label>
-          <label>
-            <span>结束时间</span>
-            <input type="date" value={endedOn} onChange={(event) => setEndedOn(event.target.value)} />
-          </label>
-        </div>
-        <label>
-          <span>补充说明</span>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} />
-        </label>
-        <footer>
-          {initial && onDelete ? (
-            <button type="button" className="danger-text-button" onClick={onDelete}>
-              删除
-            </button>
-          ) : null}
-          <button type="button" className="button ghost" onClick={onClose}>
-            取消
-          </button>
-          <button type="submit" className="button primary">
-            保存
           </button>
         </footer>
       </form>
@@ -1156,6 +986,128 @@ export function CustomValuesDialog({
           </label>
         ))}
         {!fields.length ? <p className="empty-copy">还没有自定义维度，请先到设置中添加。</p> : null}
+        <footer>
+          <button type="button" className="button ghost" onClick={onClose}>
+            取消
+          </button>
+          <button type="submit" className="button primary">
+            保存
+          </button>
+        </footer>
+      </form>
+    </DialogFrame>
+  )
+}
+
+export function SummaryDialog({
+  title,
+  label,
+  initial,
+  placeholder,
+  onClose,
+  onSave,
+}: {
+  title: string
+  label: string
+  initial: string
+  placeholder: string
+  onClose: () => void
+  onSave: (value: string) => void
+}) {
+  const [value, setValue] = useState(initial)
+
+  return (
+    <DialogFrame title={title} onClose={onClose}>
+      <form
+        className="stack-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSave(value.trim())
+        }}
+      >
+        <label>
+          <span>{label}</span>
+          <textarea
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            rows={9}
+            placeholder={placeholder}
+          />
+        </label>
+        <footer>
+          <button type="button" className="button ghost" onClick={onClose}>
+            取消
+          </button>
+          <button type="submit" className="button primary">
+            保存
+          </button>
+        </footer>
+      </form>
+    </DialogFrame>
+  )
+}
+
+export function CareerSummaryDialog({
+  initialCompany,
+  initialOccupation,
+  initialSummary,
+  onClose,
+  onSave,
+}: {
+  initialCompany: string
+  initialOccupation: string
+  initialSummary: string
+  onClose: () => void
+  onSave: (value: {
+    company: string
+    occupation: string
+    careerSummary: string
+  }) => void
+}) {
+  const [company, setCompany] = useState(initialCompany)
+  const [occupation, setOccupation] = useState(initialOccupation)
+  const [summary, setSummary] = useState(initialSummary)
+
+  return (
+    <DialogFrame title="编辑职业概况" onClose={onClose}>
+      <form
+        className="stack-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSave({
+            company: company.trim(),
+            occupation: occupation.trim(),
+            careerSummary: summary.trim(),
+          })
+        }}
+      >
+        <div className="form-grid">
+          <label>
+            <span>公司</span>
+            <input
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              placeholder="现在在哪家公司"
+            />
+          </label>
+          <label>
+            <span>职务</span>
+            <input
+              value={occupation}
+              onChange={(event) => setOccupation(event.target.value)}
+              placeholder="产品负责人"
+            />
+          </label>
+        </div>
+        <label>
+          <span>职业概况</span>
+          <textarea
+            value={summary}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={9}
+            placeholder="当前工作、事业方向或转型计划"
+          />
+        </label>
         <footer>
           <button type="button" className="button ghost" onClick={onClose}>
             取消

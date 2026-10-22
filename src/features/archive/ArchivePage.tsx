@@ -41,7 +41,23 @@ import { createPersonRecord, getPersonBundle, listActiveContacts } from '../../d
 import { useWorkspace } from '../../app/WorkspaceContext'
 import { PersonDialog } from './PersonDialog'
 
-const tiers: RelationshipTier[] = ['soul', 'close', 'friend', 'acquaintance']
+const tiers: RelationshipTier[] = [
+  'soul',
+  'close',
+  'friend',
+  'acquaintance',
+  'weak',
+]
+
+const detailPreferenceKeys: Partial<Record<RelationshipTier, string>> = {
+  acquaintance: 'show-acquaintance-details',
+  weak: 'show-weak-details',
+}
+
+// 弱关系只在归档里出现，不占用重要日期提醒位
+function showsImportantDateReminders(tier: RelationshipTier | null) {
+  return tier !== 'acquaintance' && tier !== 'weak'
+}
 type CoachRange = 'today' | 'week' | 'month'
 
 const coachRanges: Array<{
@@ -68,7 +84,7 @@ const coachRanges: Array<{
 const columnLabels: Record<string, string> = {
   fullName: '姓名',
   role: '角色',
-  occupation: '职业',
+  occupation: '职务',
   region: '地区',
   industry: '行业',
   influence: '影响力',
@@ -106,6 +122,7 @@ export function ArchivePage() {
     friend: true,
     acquaintance:
       localStorage.getItem('show-acquaintance-details') === 'true',
+    weak: localStorage.getItem('show-weak-details') === 'true',
   }))
   const [regionFilter, setRegionFilter] = useState('')
   const [influenceFilter, setInfluenceFilter] = useState('')
@@ -211,24 +228,26 @@ export function ArchivePage() {
       const selectedRange = coachRanges.find(
         (range) => range.value === coachRange,
       )!
-      const dateSignals = getUpcomingDates(
-        bundle.importantDates,
-        today,
-        selectedRange.maxDays,
-      ).map((item) => {
-        const days = differenceInCalendarDays(
-          new Date(`${item.occurrence.date}T00:00:00`),
-          new Date(`${today}T00:00:00`),
-        )
-        return {
-          days,
-          reason:
-            days === 0
-              ? `今天是${item.date.label}，记得问候`
-              : `${days} 天后是${item.date.label}，可以提前准备`,
-          priority: 90 - days,
-        }
-      })
+      const dateSignals = showsImportantDateReminders(person.tier)
+        ? getUpcomingDates(
+            bundle.importantDates,
+            today,
+            selectedRange.maxDays,
+          ).map((item) => {
+            const days = differenceInCalendarDays(
+              new Date(`${item.occurrence.date}T00:00:00`),
+              new Date(`${today}T00:00:00`),
+            )
+            return {
+              days,
+              reason:
+                days === 0
+                  ? `今天是${item.date.label}，记得问候`
+                  : `${days} 天后是${item.date.label}，可以提前准备`,
+              priority: 90 - days,
+            }
+          })
+        : []
       const followUpSignals = bundle.detailEntries
         .filter(
           (detail) => detail.followUpOn && detail.followUpOn >= today,
@@ -259,7 +278,9 @@ export function ArchivePage() {
   const upcoming = snapshot.importantDates
     .map((date) => {
       const person = snapshot.people.find((item) => item.id === date.personId)
-      return person ? { date, person } : null
+      return person && showsImportantDateReminders(person.tier)
+        ? { date, person }
+        : null
     })
     .filter((item) => item !== null)
     .flatMap((item) =>
@@ -274,10 +295,10 @@ export function ArchivePage() {
     setDetailsExpanded((current) => {
       const next = { ...current, [tier]: !current[tier] }
       if (!next[tier]) setTableEditing(false)
-      localStorage.setItem(
-        'show-acquaintance-details',
-        String(next.acquaintance),
-      )
+      const preferenceKey = detailPreferenceKeys[tier]
+      if (preferenceKey) {
+        localStorage.setItem(preferenceKey, String(next[tier]))
+      }
       return next
     })
   }
@@ -586,7 +607,7 @@ export function ArchivePage() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索姓名、姓名首字母、职业或某个细节"
+                placeholder="搜索姓名、姓名首字母、职务或某个细节"
               />
             </label>
             <button
@@ -740,7 +761,7 @@ export function ArchivePage() {
                           <small>
                             {[person.industry, person.occupation]
                               .filter(Boolean)
-                              .join(' · ') || '行业与职业未记录'}
+                              .join(' · ') || '行业与职务未记录'}
                           </small>
                         </span>
                       </Link>
@@ -796,7 +817,7 @@ export function ArchivePage() {
               <h2>{query ? '没有找到匹配的人' : '这一类还没有人'}</h2>
               <p>
                 {query
-                  ? '换一个名字、职业或细节试试。'
+                  ? '换一个名字、职务或细节试试。'
                   : '新增人员后，他会出现在这里。'}
               </p>
             </div>
@@ -814,7 +835,6 @@ export function ArchivePage() {
             tier: input.tier,
             fullName: input.fullName,
             role: input.role,
-            occupation: input.occupation,
             region: input.region,
             industry: input.industry,
             influence: input.influence,
@@ -822,9 +842,8 @@ export function ArchivePage() {
             influenceNote: input.influenceNote,
             intimacyNote: input.intimacyNote,
             cadenceDays: input.cadenceDays,
-            familySummary: input.familySummary,
-            careerSummary: input.careerSummary,
-            firstMetOn: input.firstMetOn,
+            school: input.school,
+            major: input.major,
             firstMetPlace: input.firstMetPlace,
             firstMetStory: input.firstMetStory,
           })

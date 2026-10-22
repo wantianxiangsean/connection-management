@@ -1,4 +1,9 @@
-export type RelationshipTier = 'soul' | 'close' | 'friend' | 'acquaintance'
+export type RelationshipTier =
+  | 'soul'
+  | 'close'
+  | 'friend'
+  | 'acquaintance'
+  | 'weak'
 export type Influence = 'weak' | 'medium' | 'strong'
 export type Intimacy = 'distant' | 'medium' | 'close'
 export type PersonKind = 'contact' | 'reference'
@@ -29,6 +34,9 @@ export interface Person {
   intimacyNote: string
   familySummary: string
   careerSummary: string
+  company?: string
+  school?: string
+  major?: string
   notes: string
   cadenceDays: number | null
   snoozedUntil: string | null
@@ -54,6 +62,7 @@ export interface Interaction {
   occurredOn: string
   channel: InteractionChannel
   summary: string
+  detailEntryId?: string | null
 }
 
 export interface FamilyMember {
@@ -201,6 +210,7 @@ export const tierLabels: Record<RelationshipTier, string> = {
   close: '密友',
   friend: '好友',
   acquaintance: '认识的人',
+  weak: '弱连接',
 }
 
 export const influenceLabels: Record<Influence, string> = {

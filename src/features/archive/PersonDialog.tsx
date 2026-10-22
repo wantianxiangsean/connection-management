@@ -19,9 +19,8 @@ interface PersonInput {
   influenceNote: string
   intimacyNote: string
   cadenceDays: number | null
-  familySummary: string
-  careerSummary: string
-  firstMetOn: string | null
+  school: string
+  major: string
   firstMetPlace: string
   firstMetStory: string
 }
@@ -50,9 +49,8 @@ export function PersonDialog({
     influenceNote: '',
     intimacyNote: '',
     cadenceDays: null,
-    familySummary: '',
-    careerSummary: '',
-    firstMetOn: null,
+    school: '',
+    major: '',
     firstMetPlace: '',
     firstMetStory: '',
   })
@@ -76,9 +74,8 @@ export function PersonDialog({
       influenceNote: '',
       intimacyNote: '',
       cadenceDays: null,
-      familySummary: '',
-      careerSummary: '',
-      firstMetOn: null,
+      school: '',
+      major: '',
       firstMetPlace: '',
       firstMetStory: '',
     })
@@ -147,19 +144,6 @@ export function PersonDialog({
               />
             </label>
             <label>
-              <span>职业</span>
-              <input
-                value={values.occupation}
-                onChange={(event) =>
-                  setValues((current) => ({
-                    ...current,
-                    occupation: event.target.value,
-                  }))
-                }
-                placeholder="产品负责人"
-              />
-            </label>
-            <label>
               <span>地区</span>
               <input
                 value={values.region}
@@ -169,7 +153,7 @@ export function PersonDialog({
                 placeholder="上海"
               />
             </label>
-            <label>
+            <label className="form-span-2">
               <span>行业</span>
               <input
                 value={values.industry}
@@ -180,6 +164,32 @@ export function PersonDialog({
                   }))
                 }
                 placeholder="科技"
+              />
+            </label>
+            <label>
+              <span>毕业院校</span>
+              <input
+                value={values.school}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    school: event.target.value,
+                  }))
+                }
+                placeholder="浙江大学"
+              />
+            </label>
+            <label>
+              <span>专业</span>
+              <input
+                value={values.major}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    major: event.target.value,
+                  }))
+                }
+                placeholder="工业设计"
               />
             </label>
             <label>
@@ -266,49 +276,8 @@ export function PersonDialog({
               />
             </label>
           </div>
-          <label>
-            <span>家庭概况</span>
-            <textarea
-              value={values.familySummary}
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  familySummary: event.target.value,
-                }))
-              }
-              placeholder="家庭成员、居住情况或最近近况"
-              rows={3}
-            />
-          </label>
-          <label>
-            <span>职业概况</span>
-            <textarea
-              value={values.careerSummary}
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  careerSummary: event.target.value,
-                }))
-              }
-              placeholder="当前工作、事业方向或转型计划"
-              rows={3}
-            />
-          </label>
           <div className="form-grid">
-            <label>
-              <span>第一次见面日期</span>
-              <input
-                type="date"
-                value={values.firstMetOn ?? ''}
-                onChange={(event) =>
-                  setValues((current) => ({
-                    ...current,
-                    firstMetOn: event.target.value || null,
-                  }))
-                }
-              />
-            </label>
-            <label>
+            <label className="form-span-2">
               <span>第一次见面地点</span>
               <input
                 value={values.firstMetPlace}

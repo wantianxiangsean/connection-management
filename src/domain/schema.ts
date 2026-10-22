@@ -5,6 +5,7 @@ export const relationshipTierSchema = z.enum([
   'close',
   'friend',
   'acquaintance',
+  'weak',
 ])
 
 export const influenceSchema = z.enum(['weak', 'medium', 'strong'])
@@ -23,6 +24,9 @@ export const personInputSchema = z
     influence: influenceSchema.nullable().default(null),
     intimacy: intimacySchema.nullable().default(null),
     cadenceDays: z.number().int().positive().nullable().default(null),
+    school: z.string().trim().default(''),
+    major: z.string().trim().default(''),
+    company: z.string().trim().default(''),
     notes: z.string().trim().default(''),
   })
   .refine((value) => (value.kind === 'contact' ? value.tier !== null : value.tier === null), {

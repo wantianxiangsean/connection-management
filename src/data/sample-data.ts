@@ -1,9 +1,9 @@
-import type { DatabaseSnapshot } from '../domain/types'
+import type { DatabaseSnapshot, RelationshipTier } from '../domain/types'
 
 function person(
   id: string,
   fullName: string,
-  tier: 'soul' | 'close' | 'friend' | 'acquaintance' | null,
+  tier: RelationshipTier | null,
   details: Partial<DatabaseSnapshot['people'][number]> = {},
 ): DatabaseSnapshot['people'][number] {
   return {

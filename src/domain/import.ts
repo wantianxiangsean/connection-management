@@ -14,6 +14,8 @@ const tierMap: Record<string, RelationshipTier> = {
   friend: 'friend',
   认识的人: 'acquaintance',
   acquaintance: 'acquaintance',
+  弱连接: 'weak',
+  weak: 'weak',
 }
 
 export function normalizePersonName(name: string) {
@@ -43,7 +45,7 @@ export function buildImportPreview(
     const tier = tierMap[tierText] ?? null
     const errors: string[] = []
     if (!fullName) errors.push('缺少姓名')
-    if (!tier) errors.push('关系应为命友、密友、好友或认识的人')
+    if (!tier) errors.push('关系应为命友、密友、好友、认识的人或弱连接')
     return {
       rowNumber: index + 2,
       fullName,

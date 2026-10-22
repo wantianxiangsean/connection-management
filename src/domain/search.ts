@@ -13,6 +13,9 @@ export function matchesPersonSearch(bundle: PersonBundle, query: string) {
     bundle.person.industry,
     bundle.person.familySummary,
     bundle.person.careerSummary,
+    bundle.person.company ?? '',
+    bundle.person.school ?? '',
+    bundle.person.major ?? '',
     ...bundle.familyMembers.flatMap((item) => [item.name, item.relation, item.note]),
     ...bundle.careerEntries.flatMap((item) => [
       item.organization,

@@ -133,7 +133,7 @@ describe('archive application flow', () => {
 
     await user.type(
       screen.getByPlaceholderText(
-        '搜索姓名、姓名首字母、职业或某个细节',
+        '搜索姓名、姓名首字母、职务或某个细节',
       ),
       '燕麦',
     )
@@ -193,8 +193,26 @@ describe('archive application flow', () => {
     const roleInput = within(profileDialog).getByLabelText('角色')
     await user.clear(roleInput)
     await user.type(roleInput, '人生搭档')
+    const influenceNoteInput =
+      within(profileDialog).getByLabelText('影响力备注')
+    expect(influenceNoteInput).toHaveValue('总能把复杂问题说得很清楚')
+    await user.clear(influenceNoteInput)
+    await user.type(influenceNoteInput, '判断一直很准')
     await user.click(within(profileDialog).getByRole('button', { name: '保存' }))
     expect(await screen.findByText('人生搭档')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
+    expect(
+      within(screen.getByRole('dialog', { name: '编辑基本资料' })).getByLabelText(
+        '影响力备注',
+      ),
+    ).toHaveValue('判断一直很准')
+    await user.click(
+      within(screen.getByRole('dialog', { name: '编辑基本资料' })).getByRole(
+        'button',
+        { name: '取消' },
+      ),
+    )
 
     const detailSection = screen
       .getByRole('heading', { name: '谈过的细节' })
@@ -304,11 +322,11 @@ describe('archive application flow', () => {
       .map((heading) => heading.textContent)
     expect(headings.slice(0, 8)).toEqual([
       '互动记录',
-      '家庭成员',
-      '学业/职业',
+      '谈过的细节',
+      '家庭概况',
+      '职业概况',
       '重要日期',
       '共同认识的人',
-      '谈过的细节',
       '第一次认识 / 见面',
       '备注',
     ])
@@ -324,24 +342,22 @@ describe('archive application flow', () => {
     expect(screen.queryByText('添加目标')).not.toBeInTheDocument()
 
     const career = screen
-      .getByRole('heading', { name: '学业/职业' })
-      .closest('section')!
-    const family = screen
-      .getByRole('heading', { name: '家庭成员' })
+      .getByRole('heading', { name: '职业概况' })
       .closest('section')!
     const dates = screen.getByRole('heading', { name: '重要日期' }).closest('section')!
     const mutual = screen
       .getByRole('heading', { name: '共同认识的人' })
       .closest('section')!
     const notes = screen.getByRole('heading', { name: '备注' }).closest('section')!
-    expect(within(career).getByRole('button', { name: '编辑' })).toBeInTheDocument()
-    expect(within(family).getByRole('button', { name: '新增' })).toBeInTheDocument()
+    expect(
+      within(career).getByRole('button', { name: '编辑' }),
+    ).toBeInTheDocument()
     expect(within(dates).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(mutual).getByRole('button', { name: '新增' })).toBeInTheDocument()
     expect(within(notes).getByRole('button', { name: '编辑' })).toBeInTheDocument()
   })
 
-  it('captures school and major in the education and career history', async () => {
+  it('captures school and major from the basic profile form', async () => {
     const user = userEvent.setup()
     render(
       <App
@@ -358,13 +374,10 @@ describe('archive application flow', () => {
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
 
-    const careerSection = screen
-      .getByRole('heading', { name: '学业/职业' })
-      .closest('section')!
     await user.click(
-      within(careerSection).getByRole('button', { name: '编辑' }),
+      screen.getByRole('button', { name: '编辑基本资料' }),
     )
-    const dialog = screen.getByRole('dialog', { name: '添加职业经历' })
+    const dialog = screen.getByRole('dialog', { name: '编辑基本资料' })
     await user.type(within(dialog).getByLabelText('毕业院校'), '清华大学')
     await user.type(within(dialog).getByLabelText('专业'), '计算机科学')
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
@@ -372,82 +385,51 @@ describe('archive application flow', () => {
     expect(await screen.findByText('清华大学 · 计算机科学')).toBeInTheDocument()
   })
 
-  it('shows each family summary entry separately and opens it for editing', async () => {
+  it('edits family and career summaries from the profile page', async () => {
     const user = userEvent.setup()
-    const repository = new LocalRepository({
-      storage: localStorage,
-      key: 'app-test',
-      seed: true,
-    })
-    const snapshot = createSampleSnapshot()
-    snapshot.people[0].familySummary =
-      '两个孩子：\n大儿子2026年考上天津大学\n小儿子正在读初中'
-    await repository.save(snapshot)
-
-    render(<App repository={repository} />)
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
 
     await screen.findByRole('heading', { name: '155人脉管理' })
     await user.click(screen.getByRole('link', { name: '林知秋' }))
-    expect(
-      screen.getByRole('button', { name: '编辑家庭概况：大儿子2026年考上天津大学' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: '编辑家庭概况：小儿子正在读初中' }),
-    ).toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole('button', { name: '编辑家庭概况：大儿子2026年考上天津大学' }),
-    )
-    expect(
-      screen.getByRole('dialog', { name: '编辑基本资料' }),
-    ).toBeInTheDocument()
-  })
-
-  it('uses the same family member management for close friends and acquaintances', async () => {
-    const user = userEvent.setup()
-    const repository = new LocalRepository({
-      storage: localStorage,
-      key: 'app-test',
-      seed: true,
-    })
-    const snapshot = createSampleSnapshot()
-    const acquaintance = snapshot.people.find(
-      (person) => person.id === 'gu-xiaofeng',
-    )!
-    acquaintance.familySummary = '有一个女儿\n父母住在深圳'
-    await repository.save(snapshot)
-
-    render(<App repository={repository} />)
-
-    await screen.findByRole('heading', { name: '155人脉管理' })
-    await user.click(screen.getByRole('tab', { name: /密友/ }))
-    await user.click(screen.getByRole('link', { name: '陈望川' }))
-    const closeFamily = screen
-      .getByRole('heading', { name: '家庭成员' })
+    const familySection = screen
+      .getByRole('heading', { name: '家庭概况' })
       .closest('section')!
-    expect(
-      within(closeFamily).getByRole('button', {
-        name: '编辑家庭成员豆沙',
-      }),
-    ).toBeInTheDocument()
+    await user.click(within(familySection).getByRole('button', { name: '编辑' }))
+    const familyDialog = screen.getByRole('dialog', { name: '编辑家庭概况' })
+    const familyField = within(familyDialog).getByLabelText('家庭概况')
+    await user.clear(familyField)
+    await user.type(familyField, '父母住在杭州')
+    await user.click(within(familyDialog).getByRole('button', { name: '保存' }))
+    expect(await screen.findByText('父母住在杭州')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('link', { name: '返回155人脉管理' }))
-    await user.click(screen.getByRole('tab', { name: /认识的人/ }))
-    await user.click(screen.getByRole('link', { name: '顾晓风' }))
-    const acquaintanceFamily = screen
-      .getByRole('heading', { name: '家庭成员' })
+    const careerSection = screen
+      .getByRole('heading', { name: '职业概况' })
       .closest('section')!
-    expect(
-      within(acquaintanceFamily).getByRole('button', {
-        name: '编辑家庭概况：有一个女儿',
-      }),
-    ).toBeInTheDocument()
     await user.click(
-      within(acquaintanceFamily).getByRole('button', { name: '新增' }),
+      within(careerSection).getByRole('button', { name: '编辑' }),
     )
-    expect(
-      screen.getByRole('dialog', { name: '添加家庭成员' }),
-    ).toBeInTheDocument()
+    const careerDialog = screen.getByRole('dialog', { name: '编辑职业概况' })
+    await user.type(within(careerDialog).getByLabelText('公司'), '澄野科技')
+    const occupationField = within(careerDialog).getByLabelText('职务')
+    await user.clear(occupationField)
+    await user.type(occupationField, '产品顾问')
+    const careerField = within(careerDialog).getByLabelText('职业概况')
+    await user.clear(careerField)
+    await user.type(careerField, '专注独立产品顾问')
+    await user.click(within(careerDialog).getByRole('button', { name: '保存' }))
+    expect(await screen.findByText('专注独立产品顾问')).toBeInTheDocument()
+    expect(screen.getByText('澄野科技 · 产品顾问')).toBeInTheDocument()
   })
 
   it('removes a mutual connection from either side of the relationship', async () => {
@@ -861,5 +843,14 @@ describe('archive application flow', () => {
     expect(
       within(interactionSection).getByText('第二次互动内容'),
     ).toBeInTheDocument()
+    expect(
+      within(detailSection).getByText('第一次互动内容'),
+    ).toBeInTheDocument()
+    expect(
+      within(detailSection).getByText('第二次互动内容'),
+    ).toBeInTheDocument()
+    expect(
+      within(interactionSection).getAllByText(/关联细节 · 近况/),
+    ).toHaveLength(2)
   })
 })
