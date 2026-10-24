@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptySnapshot } from '../domain/workspace'
 import { App } from './App'
 import { queryClient } from './WorkspaceContext'
@@ -12,6 +12,10 @@ describe('archive application flow', () => {
     localStorage.clear()
     queryClient.clear()
     window.location.hash = ''
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('opens the local archive directly and switches relationship tiers', async () => {
@@ -485,6 +489,7 @@ describe('archive application flow', () => {
   })
 
   it('filters relationship coaching by today, this week and this month', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: new Date('2026-10-22T09:00:00') })
     const user = userEvent.setup()
     render(
       <App

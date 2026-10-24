@@ -144,7 +144,8 @@ test('finds a mutual contact by pinyin initials', async ({ page }) => {
 })
 
 test('keeps the settings heading compact', async ({ page }) => {
-  await page.goto('/#/settings')
+  await page.goto('/')
+  await page.getByRole('link', { name: '设置' }).click()
   const heading = page.getByRole('heading', { name: '设置' })
   await expect(heading).toBeVisible()
 
