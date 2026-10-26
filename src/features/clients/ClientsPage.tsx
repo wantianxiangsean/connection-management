@@ -4,6 +4,7 @@ import {
   MapPin,
   Plus,
   Search,
+  Settings,
   Users,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -152,6 +153,14 @@ export function ClientsPage() {
             <Plus size={18} aria-hidden="true" />
             新增客户
           </button>
+          <Link
+            to="/settings"
+            className="button settings-entry-button"
+            aria-label="设置"
+            title="设置"
+          >
+            <Settings size={17} aria-hidden="true" />
+          </Link>
         </div>
       </header>
 

@@ -37,7 +37,8 @@ export function ClientContactDialog({
     target:
       | ({ personId: string } & ContactDetails)
       | ({ name: string } & ContactDetails),
-  ) => void
+    keepOpen: boolean,
+  ) => boolean
 }) {
   const candidates = useMemo(() => sortBySurname(people), [people])
   const [personId, setPersonId] = useState('')
@@ -105,10 +106,34 @@ export function ClientContactDialog({
     }
   }
 
+  function reset() {
+    setPersonId('')
+    setSearch('')
+    setOpen(false)
+    setActiveIndex(0)
+    setNewName('')
+    setDetails({
+      title: '',
+      influence: null,
+      attitude: 'neutral',
+      note: '',
+    })
+  }
+
+  function persist(keepOpen: boolean) {
+    const target = newName.trim()
+      ? { name: newName.trim(), ...details }
+      : personId
+        ? { personId, ...details }
+        : null
+    if (!target) return
+    const saved = onSave(target, keepOpen)
+    if (keepOpen && saved) reset()
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (newName.trim()) onSave({ name: newName.trim(), ...details })
-    else if (personId) onSave({ personId, ...details })
+    persist(false)
   }
 
   return (
@@ -313,11 +338,19 @@ export function ClientContactDialog({
             取消
           </button>
           <button
+            type="button"
+            className="button ghost"
+            disabled={!personId && !newName.trim()}
+            onClick={() => persist(true)}
+          >
+            保存并新增
+          </button>
+          <button
             type="submit"
             className="button primary"
             disabled={!personId && !newName.trim()}
           >
-            添加联系人
+            保存
           </button>
         </footer>
       </form>

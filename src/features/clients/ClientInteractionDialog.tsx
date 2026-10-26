@@ -3,13 +3,16 @@ import { useState, type FormEvent } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
 import {
   channelLabels,
+  type ClientInteraction,
   type InteractionChannel,
 } from '../../domain/types'
 
 export function ClientInteractionDialog({
+  initial,
   onClose,
   onSave,
 }: {
+  initial?: ClientInteraction | null
   onClose: () => void
   onSave: (value: {
     occurredOn: string
@@ -17,9 +20,13 @@ export function ClientInteractionDialog({
     summary: string
   }) => void
 }) {
-  const [occurredOn, setOccurredOn] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [channel, setChannel] = useState<InteractionChannel>('meeting')
-  const [summary, setSummary] = useState('')
+  const [occurredOn, setOccurredOn] = useState(
+    initial?.occurredOn ?? format(new Date(), 'yyyy-MM-dd'),
+  )
+  const [channel, setChannel] = useState<InteractionChannel>(
+    initial?.channel ?? 'meeting',
+  )
+  const [summary, setSummary] = useState(initial?.summary ?? '')
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -28,7 +35,11 @@ export function ClientInteractionDialog({
   }
 
   return (
-    <DialogFrame title="记一次互动" overline="互动记录" onClose={onClose}>
+    <DialogFrame
+      title={initial ? '编辑互动' : '记一次互动'}
+      overline="互动记录"
+      onClose={onClose}
+    >
       <form className="stack-form" onSubmit={submit}>
         <div className="form-grid">
           <label>

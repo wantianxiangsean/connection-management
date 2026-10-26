@@ -26,7 +26,9 @@ import {
   removeClientTodo,
   reorderClientItems,
   toggleClientTodo,
+  updateClientArtifact,
   updateClientContact,
+  updateClientInteraction,
   updateClientTodo,
   upsertClient,
 } from '../../domain/workspace'
@@ -40,6 +42,7 @@ import {
   type ClientArtifact,
   type ClientArtifactKind,
   type ClientContact,
+  type ClientInteraction,
 } from '../../domain/types'
 import { ClientArtifactDialog } from './ClientArtifactDialog'
 import { ClientContactDialog } from './ClientContactDialog'
@@ -90,6 +93,10 @@ export function ClientDetailPage() {
   const [artifactKind, setArtifactKind] = useState<ClientArtifactKind | null>(
     null,
   )
+  const [editingArtifact, setEditingArtifact] =
+    useState<ClientArtifact | null>(null)
+  const [editingInteraction, setEditingInteraction] =
+    useState<ClientInteraction | null>(null)
   const [productSolution, setProductSolution] =
     useState<ClientArtifact | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -240,7 +247,7 @@ export function ClientDetailPage() {
   const todoIds = todos.map((item) => item.id)
   const interactionIds = interactions.map((item) => item.id)
 
-  function addContact(target: ContactTarget) {
+  function addContact(target: ContactTarget, keepOpen: boolean) {
     if (
       'name' in target &&
       contacts.some(
@@ -250,11 +257,12 @@ export function ClientDetailPage() {
       )
     ) {
       setContactError('这个联系人已经在列表里')
-      return
+      return false
     }
     update((current) => addClientContact(current, activeClient.id, target))
     setContactError('')
-    setContactOpen(false)
+    if (!keepOpen) setContactOpen(false)
+    return true
   }
 
   function addTodo(event: FormEvent) {
@@ -606,7 +614,10 @@ export function ClientDetailPage() {
               <button
                 type="button"
                 className="button person-edit-button"
-                onClick={() => setInteractionOpen(true)}
+                onClick={() => {
+                  setEditingInteraction(null)
+                  setInteractionOpen(true)
+                }}
               >
                 <Plus size={16} aria-hidden="true" />
                 新增互动
@@ -658,6 +669,17 @@ export function ClientDetailPage() {
                       </button>
                       <button
                         type="button"
+                        className="icon-button client-contact-edit"
+                        aria-label={`编辑互动 ${item.occurredOn}`}
+                        onClick={() => {
+                          setEditingInteraction(item)
+                          setInteractionOpen(true)
+                        }}
+                      >
+                        <Pencil size={15} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
                         className="icon-button client-contact-remove"
                         aria-label={`删除互动 ${item.occurredOn}`}
                         onClick={() =>
@@ -696,7 +718,10 @@ export function ClientDetailPage() {
                   <button
                     type="button"
                     className="button person-edit-button"
-                    onClick={() => setArtifactKind(section.kind)}
+                    onClick={() => {
+                      setEditingArtifact(null)
+                      setArtifactKind(section.kind)
+                    }}
                   >
                     <Plus size={16} aria-hidden="true" />
                     新增{label}
@@ -809,6 +834,17 @@ export function ClientDetailPage() {
                             </button>
                             <button
                               type="button"
+                              className="icon-button client-contact-edit"
+                              aria-label={`编辑${label} ${item.name}`}
+                              onClick={() => {
+                                setEditingArtifact(item)
+                                setArtifactKind(item.kind)
+                              }}
+                            >
+                              <Pencil size={15} aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
                               className="icon-button client-contact-remove"
                               aria-label={`删除${label} ${item.name}`}
                               onClick={() =>
@@ -859,12 +895,23 @@ export function ClientDetailPage() {
 
       {interactionOpen ? (
         <ClientInteractionDialog
-          onClose={() => setInteractionOpen(false)}
+          initial={editingInteraction}
+          onClose={() => {
+            setInteractionOpen(false)
+            setEditingInteraction(null)
+          }}
           onSave={(value) => {
             update((current) =>
-              addClientInteraction(current, activeClient.id, value),
+              editingInteraction
+                ? updateClientInteraction(
+                    current,
+                    editingInteraction.id,
+                    value,
+                  )
+                : addClientInteraction(current, activeClient.id, value),
             )
             setInteractionOpen(false)
+            setEditingInteraction(null)
           }}
         />
       ) : null}
@@ -928,12 +975,24 @@ export function ClientDetailPage() {
       {artifactKind ? (
         <ClientArtifactDialog
           kind={artifactKind}
-          onClose={() => setArtifactKind(null)}
+          initial={editingArtifact}
+          onClose={() => {
+            setArtifactKind(null)
+            setEditingArtifact(null)
+          }}
           onSave={(value) => {
             update((current) =>
-              addClientArtifact(current, activeClient.id, artifactKind, value),
+              editingArtifact
+                ? updateClientArtifact(current, editingArtifact.id, value)
+                : addClientArtifact(
+                    current,
+                    activeClient.id,
+                    artifactKind,
+                    value,
+                  ),
             )
             setArtifactKind(null)
+            setEditingArtifact(null)
           }}
         />
       ) : null}

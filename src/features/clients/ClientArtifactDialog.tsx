@@ -2,15 +2,18 @@ import { useState, type FormEvent } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
 import {
   clientArtifactLabels,
+  type ClientArtifact,
   type ClientArtifactKind,
 } from '../../domain/types'
 
 export function ClientArtifactDialog({
   kind,
+  initial,
   onClose,
   onSave,
 }: {
   kind: ClientArtifactKind
+  initial?: ClientArtifact | null
   onClose: () => void
   onSave: (value: {
     name: string
@@ -19,9 +22,9 @@ export function ClientArtifactDialog({
   }) => void
 }) {
   const label = clientArtifactLabels[kind]
-  const [name, setName] = useState('')
-  const [note, setNote] = useState('')
-  const [industry, setIndustry] = useState('')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [note, setNote] = useState(initial?.note ?? '')
+  const [industry, setIndustry] = useState(initial?.industry ?? '')
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -34,7 +37,11 @@ export function ClientArtifactDialog({
   }
 
   return (
-    <DialogFrame title={`新增${label}`} overline="客户资料" onClose={onClose}>
+    <DialogFrame
+      title={initial ? `编辑${label}` : `新增${label}`}
+      overline={initial ? '编辑资料' : '客户资料'}
+      onClose={onClose}
+    >
       <form className="stack-form" onSubmit={submit}>
         <label>
           <span>{label}名称</span>

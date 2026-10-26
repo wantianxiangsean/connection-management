@@ -585,6 +585,26 @@ export function addClientArtifact(
   return snapshot
 }
 
+export function updateClientArtifact(
+  source: DatabaseSnapshot,
+  artifactId: string,
+  input: { name: string; note?: string; industry?: string },
+) {
+  const snapshot = clone(source)
+  snapshot.clientArtifacts = snapshot.clientArtifacts.map((item) =>
+    item.id === artifactId
+      ? {
+          ...item,
+          name: input.name.trim() || item.name,
+          note: (input.note ?? item.note).trim(),
+          industry: (input.industry ?? item.industry).trim(),
+          updatedAt: nowIso(),
+        }
+      : item,
+  )
+  return snapshot
+}
+
 export function attachProductToSolution(
   source: DatabaseSnapshot,
   solutionId: string,
@@ -671,6 +691,29 @@ export function addClientInteraction(
     position,
     createdAt: nowIso(),
   } satisfies ClientInteraction)
+  return snapshot
+}
+
+export function updateClientInteraction(
+  source: DatabaseSnapshot,
+  interactionId: string,
+  input: {
+    occurredOn: string
+    channel: InteractionChannel
+    summary: string
+  },
+) {
+  const snapshot = clone(source)
+  snapshot.clientInteractions = snapshot.clientInteractions.map((item) =>
+    item.id === interactionId
+      ? {
+          ...item,
+          occurredOn: input.occurredOn,
+          channel: input.channel,
+          summary: input.summary.trim() || item.summary,
+        }
+      : item,
+  )
   return snapshot
 }
 

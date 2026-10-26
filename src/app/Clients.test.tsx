@@ -32,6 +32,13 @@ describe('clients and partners', () => {
     return user
   }
 
+  it('keeps a settings entry on the clients page', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getByRole('link', { name: '设置' }))
+    await screen.findByRole('heading', { name: '设置' })
+  })
+
   it('creates a client with a linked and an independent contact', async () => {
     const user = await openClients()
 
@@ -60,7 +67,7 @@ describe('clients and partners', () => {
       await within(linkDialog).findByRole('option', { name: /林知秋/ }),
     )
     await user.click(
-      within(linkDialog).getByRole('button', { name: '添加联系人' }),
+      within(linkDialog).getByRole('button', { name: '保存' }),
     )
 
     expect(await screen.findByText('林知秋')).toBeInTheDocument()
@@ -85,7 +92,7 @@ describe('clients and partners', () => {
     )
     await user.type(within(newDialog).getByLabelText('备注'), '对价格敏感')
     await user.click(
-      within(newDialog).getByRole('button', { name: '添加联系人' }),
+      within(newDialog).getByRole('button', { name: '保存' }),
     )
 
     expect(await screen.findByText('王经理')).toBeInTheDocument()
@@ -138,6 +145,47 @@ describe('clients and partners', () => {
     expect(afterRemove.clientContacts).toHaveLength(1)
   })
 
+  it('saves a contact and stays ready for the next one', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    const clientDialog = await screen.findByRole('dialog', {
+      name: '新增客户',
+    })
+    await user.type(
+      within(clientDialog).getByLabelText('名称'),
+      '青禾科技',
+    )
+    await user.click(within(clientDialog).getByLabelText('客户'))
+    await user.click(
+      within(clientDialog).getByRole('button', { name: '保存' }),
+    )
+    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
+    await screen.findByRole('heading', { name: '青禾科技' })
+
+    await user.click(screen.getByRole('button', { name: '添加联系人' }))
+    const dialog = await screen.findByRole('dialog', { name: '添加联系人' })
+    const nameInput = within(dialog).getByLabelText(/联系人姓名/)
+    await user.type(nameInput, '王经理')
+    await user.click(
+      within(dialog).getByRole('button', { name: '保存并新增' }),
+    )
+
+    expect(
+      screen.getByRole('dialog', { name: '添加联系人' }),
+    ).toBeInTheDocument()
+    expect(nameInput).toHaveValue('')
+
+    await user.type(nameInput, '李工')
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+
+    expect(
+      screen.queryByRole('dialog', { name: '添加联系人' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('王经理')).toBeInTheDocument()
+    expect(screen.getByText('李工')).toBeInTheDocument()
+  })
+
   it('edits a client and deletes it without touching the person archive', async () => {
     const user = await openClients()
 
@@ -158,7 +206,7 @@ describe('clients and partners', () => {
       '王经理',
     )
     await user.click(
-      within(contactDialog).getByRole('button', { name: '添加联系人' }),
+      within(contactDialog).getByRole('button', { name: '保存' }),
     )
 
     await user.click(screen.getByRole('button', { name: '编辑' }))
@@ -374,9 +422,23 @@ describe('clients and partners', () => {
     )
     expect(screen.queryByText('寄送两套样品')).not.toBeInTheDocument()
     await user.click(
-      screen.getByRole('button', { name: '删除项目 门店视觉升级' }),
+      screen.getByRole('button', { name: '编辑项目 门店视觉升级' }),
     )
-    expect(screen.queryByText('门店视觉升级')).not.toBeInTheDocument()
+    const editProject = await screen.findByRole('dialog', {
+      name: '编辑项目',
+    })
+    const projectName = within(editProject).getByLabelText('项目名称')
+    await user.clear(projectName)
+    await user.type(projectName, '门店改版')
+    await user.click(
+      within(editProject).getByRole('button', { name: '保存' }),
+    )
+    expect(await screen.findByText('门店改版')).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: '删除项目 门店改版' }),
+    )
+    expect(screen.queryByText('门店改版')).not.toBeInTheDocument()
   })
 
   it('hangs a product under a solution', async () => {
@@ -484,6 +546,91 @@ describe('clients and partners', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('edits projects, products and solutions after creation', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    const dialog = await screen.findByRole('dialog', { name: '新增客户' })
+    await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
+    await user.click(within(dialog).getByLabelText('客户'))
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
+    await screen.findByRole('heading', { name: '青禾科技' })
+
+    await user.click(screen.getByRole('button', { name: '新增项目' }))
+    const projectDialog = await screen.findByRole('dialog', {
+      name: '新增项目',
+    })
+    await user.type(
+      within(projectDialog).getByLabelText('项目名称'),
+      '项目甲',
+    )
+    await user.click(
+      within(projectDialog).getByRole('button', { name: '保存' }),
+    )
+    await user.click(screen.getByRole('button', { name: '编辑项目 项目甲' }))
+    const projectEdit = await screen.findByRole('dialog', { name: '编辑项目' })
+    const projectName = within(projectEdit).getByLabelText('项目名称')
+    await user.clear(projectName)
+    await user.type(projectName, '项目乙')
+    await user.click(
+      within(projectEdit).getByRole('button', { name: '保存' }),
+    )
+    expect(await screen.findByText('项目乙')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '新增产品' }))
+    const productDialog = await screen.findByRole('dialog', {
+      name: '新增产品',
+    })
+    await user.type(
+      within(productDialog).getByLabelText('产品名称'),
+      '产品甲',
+    )
+    await user.click(
+      within(productDialog).getByRole('button', { name: '保存' }),
+    )
+    await user.click(screen.getByRole('button', { name: '编辑产品 产品甲' }))
+    const productEdit = await screen.findByRole('dialog', {
+      name: '编辑产品',
+    })
+    const productName = within(productEdit).getByLabelText('产品名称')
+    await user.clear(productName)
+    await user.type(productName, '产品乙')
+    await user.click(
+      within(productEdit).getByRole('button', { name: '保存' }),
+    )
+    expect(await screen.findByText('产品乙')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '新增方案' }))
+    const solutionDialog = await screen.findByRole('dialog', {
+      name: '新增方案',
+    })
+    await user.type(
+      within(solutionDialog).getByLabelText('方案名称'),
+      '方案甲',
+    )
+    await user.type(within(solutionDialog).getByLabelText(/行业/), '甲行业')
+    await user.click(
+      within(solutionDialog).getByRole('button', { name: '保存' }),
+    )
+    await user.click(screen.getByRole('button', { name: '编辑方案 方案甲' }))
+    const solutionEdit = await screen.findByRole('dialog', {
+      name: '编辑方案',
+    })
+    const solutionName = within(solutionEdit).getByLabelText('方案名称')
+    await user.clear(solutionName)
+    await user.type(solutionName, '方案乙')
+    const industryInput = within(solutionEdit).getByLabelText(/行业/)
+    await user.clear(industryInput)
+    await user.type(industryInput, '乙行业、共同行业')
+    await user.click(
+      within(solutionEdit).getByRole('button', { name: '保存' }),
+    )
+    expect(await screen.findByText('方案乙')).toBeInTheDocument()
+    expect(screen.getByText('乙行业')).toBeInTheDocument()
+    expect(screen.getByText('共同行业')).toBeInTheDocument()
+  })
+
   it('records interactions with a company', async () => {
     const user = await openClients()
 
@@ -522,10 +669,30 @@ describe('clients and partners', () => {
     expect(screen.getByText('通话')).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', { name: '删除互动 2026-10-20' }),
+      screen.getByRole('button', { name: '编辑互动 2026-10-20' }),
+    )
+    const editInteraction = await screen.findByRole('dialog', {
+      name: '编辑互动',
+    })
+    fireEvent.change(within(editInteraction).getByLabelText('日期'), {
+      target: { value: '2026-10-22' },
+    })
+    const summaryInput = within(editInteraction).getByLabelText('沟通内容')
+    await user.clear(summaryInput)
+    await user.type(summaryInput, '确认年度框架、报价和排期')
+    await user.click(
+      within(editInteraction).getByRole('button', { name: '保存' }),
     )
     expect(
-      screen.queryByText('确认年度框架和报价'),
+      await screen.findByText('确认年度框架、报价和排期'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('2026-10-22')).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: '删除互动 2026-10-22' }),
+    )
+    expect(
+      screen.queryByText('确认年度框架、报价和排期'),
     ).not.toBeInTheDocument()
   })
 })
