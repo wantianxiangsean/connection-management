@@ -262,22 +262,22 @@ export function ClientsPage() {
                         className="client-card"
                       >
                         <div className="client-card-top">
-                          <span className="client-category-list">
-                            {client.categories.map((item) => (
-                              <span
-                                key={item}
-                                className={`client-category is-${item}`}
-                              >
-                                {clientCategoryLabels[item]}
-                              </span>
-                            ))}
-                          </span>
+                          <h2>{client.name}</h2>
                           <span className="client-contact-count">
                             <Users size={14} aria-hidden="true" />
                             {names.length} 位联系人
                           </span>
                         </div>
-                        <h2>{client.name}</h2>
+                        <span className="client-category-list">
+                          {client.categories.map((item) => (
+                            <span
+                              key={item}
+                              className={`client-category is-${item}`}
+                            >
+                              {clientCategoryLabels[item]}
+                            </span>
+                          ))}
+                        </span>
                         <p className="client-address">
                           <MapPin size={14} aria-hidden="true" />
                           {client.address || '地址未记录'}

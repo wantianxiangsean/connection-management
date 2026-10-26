@@ -325,6 +325,7 @@ export function ClientDetailPage() {
 
       <div className="client-detail-layout">
         <aside className="client-summary">
+          <h1>{activeClient.name}</h1>
           <span className="client-category-list">
             {activeClient.categories.map((item) => (
               <span key={item} className={`client-category is-${item}`}>
@@ -332,7 +333,6 @@ export function ClientDetailPage() {
               </span>
             ))}
           </span>
-          <h1>{activeClient.name}</h1>
           <p className="client-summary-address">
             <MapPin size={15} aria-hidden="true" />
             {activeClient.address || '地址未记录'}
