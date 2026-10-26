@@ -8,9 +8,9 @@ import {
   Users,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../app/WorkspaceContext'
-import { matchesPersonName } from '../../domain/alphabet'
+import { matchesPersonName, getSurnameInitial } from '../../domain/alphabet'
 import {
   createClientRecord,
   upsertClient,
@@ -34,6 +34,7 @@ type CategoryFilter = ClientCategory | 'all'
 
 export function ClientsPage() {
   const { snapshot, update } = useWorkspace()
+  const navigate = useNavigate()
   const [category, setCategory] = useState<CategoryFilter>('all')
   const [industry, setIndustry] = useState('')
   const [query, setQuery] = useState('')
@@ -120,7 +121,20 @@ export function ClientsPage() {
           value.toLocaleLowerCase('zh-CN').includes(needle),
         )
       })
-      .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+      .sort((a, b) => {
+        const initialA =
+          getSurnameInitial(a.name) === '#'
+            ? 'ZZZ'
+            : getSurnameInitial(a.name)
+        const initialB =
+          getSurnameInitial(b.name) === '#'
+            ? 'ZZZ'
+            : getSurnameInitial(b.name)
+        return (
+          initialA.localeCompare(initialB) ||
+          a.name.localeCompare(b.name, 'zh-CN')
+        )
+      })
   }, [
     category,
     contactsByClient,
@@ -151,7 +165,7 @@ export function ClientsPage() {
         <div className="page-heading-actions">
           <button type="button" className="button primary" onClick={openNewClient}>
             <Plus size={18} aria-hidden="true" />
-            新增客户
+            新增
           </button>
           <Link
             to="/settings"
@@ -267,7 +281,7 @@ export function ClientsPage() {
             {snapshot.clients.length ? null : (
               <button type="button" className="button primary" onClick={openNewClient}>
                 <Plus size={17} aria-hidden="true" />
-                新增客户
+                新增
               </button>
             )}
           </div>
@@ -279,8 +293,10 @@ export function ClientsPage() {
         initial={null}
         onClose={() => setDialogOpen(false)}
         onSave={(value) => {
-          update((current) => upsertClient(current, createClientRecord(value)))
+          const client = createClientRecord(value)
+          update((current) => upsertClient(current, client))
           setDialogOpen(false)
+          navigate(`/clients/${client.id}`)
         }}
       />
     </main>

@@ -42,20 +42,18 @@ describe('clients and partners', () => {
   it('creates a client with a linked and an independent contact', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('伙伴'))
     await user.type(within(dialog).getByLabelText('地址'), '杭州市西湖区')
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
 
-    const card = await screen.findByRole('link', { name: /青禾科技/ })
-    expect(within(card).getByText('伙伴')).toBeInTheDocument()
-    expect(within(card).getByText('杭州市西湖区')).toBeInTheDocument()
-    expect(within(card).getByText('还没有联系人')).toBeInTheDocument()
-
-    await user.click(card)
     await screen.findByRole('heading', { name: '青禾科技' })
+    expect(window.location.hash).toMatch(/^#\/clients\/client-/)
+    expect(screen.getByText('伙伴')).toBeInTheDocument()
+    expect(screen.getByText('杭州市西湖区')).toBeInTheDocument()
+    expect(screen.getByText('0 位联系人')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '添加联系人' }))
     const linkDialog = await screen.findByRole('dialog', { name: '添加联系人' })
@@ -148,7 +146,7 @@ describe('clients and partners', () => {
   it('saves a contact and stays ready for the next one', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const clientDialog = await screen.findByRole('dialog', {
       name: '新增客户',
     })
@@ -160,7 +158,6 @@ describe('clients and partners', () => {
     await user.click(
       within(clientDialog).getByRole('button', { name: '保存' }),
     )
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '添加联系人' }))
@@ -189,12 +186,11 @@ describe('clients and partners', () => {
   it('edits a client and deletes it without touching the person archive', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('客户'))
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '添加联系人' }))
@@ -301,6 +297,10 @@ describe('clients and partners', () => {
     await user.click(screen.getByRole('link', { name: '客户/伙伴' }))
     await screen.findByRole('heading', { name: '客户/伙伴' })
 
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent),
+    ).toEqual(['星野设计', '远山物流', '中软国际'])
+
     const tabs = screen.getByRole('navigation', { name: '客户类别' })
     await user.click(within(tabs).getByRole('button', { name: /供应商/ }))
     expect(screen.getByText('远山物流')).toBeInTheDocument()
@@ -349,7 +349,7 @@ describe('clients and partners', () => {
   it('lets one company carry several identities', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     const save = within(dialog).getByRole('button', { name: '保存' })
@@ -359,6 +359,10 @@ describe('clients and partners', () => {
     await user.click(within(dialog).getByLabelText('供应商'))
     expect(save).toBeEnabled()
     await user.click(save)
+
+    await screen.findByRole('heading', { name: '青禾科技' })
+    await user.click(screen.getByRole('link', { name: '返回客户/伙伴' }))
+    await screen.findByRole('heading', { name: '客户/伙伴' })
 
     const card = await screen.findByRole('link', { name: /青禾科技/ })
     expect(within(card).getByText('客户')).toBeInTheDocument()
@@ -374,12 +378,11 @@ describe('clients and partners', () => {
   it('adds projects and todos under a company', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('客户'))
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '新增项目' }))
@@ -444,12 +447,11 @@ describe('clients and partners', () => {
   it('hangs a product under a solution', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('客户'))
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '新增产品' }))
@@ -549,12 +551,11 @@ describe('clients and partners', () => {
   it('edits projects, products and solutions after creation', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('客户'))
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '新增项目' }))
@@ -634,12 +635,11 @@ describe('clients and partners', () => {
   it('records interactions with a company', async () => {
     const user = await openClients()
 
-    await user.click(screen.getAllByRole('button', { name: '新增客户' })[0])
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
     const dialog = await screen.findByRole('dialog', { name: '新增客户' })
     await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
     await user.click(within(dialog).getByLabelText('客户'))
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
-    await user.click(await screen.findByRole('link', { name: /青禾科技/ }))
     await screen.findByRole('heading', { name: '青禾科技' })
 
     await user.click(screen.getByRole('button', { name: '新增互动' }))
