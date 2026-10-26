@@ -3171,6 +3171,15 @@ button.data-action-card {
   box-shadow: 0 0 0 3px rgba(47, 106, 88, 0.08);
 }
 
+.client-groups {
+  display: grid;
+  gap: 24px;
+}
+
+.client-group {
+  display: grid;
+}
+
 .client-grid {
   display: grid;
   gap: 14px;

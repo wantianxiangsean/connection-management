@@ -18,6 +18,7 @@ import {
 import { splitIndustries } from '../../domain/clients'
 import {
   clientCategoryLabels,
+  type Client,
   type ClientCategory,
 } from '../../domain/types'
 import { ClientDialog } from './ClientDialog'
@@ -144,6 +145,17 @@ export function ClientsPage() {
     snapshot.clients,
   ])
 
+  const clientGroups = useMemo(() => {
+    const groups: Array<{ letter: string; clients: Client[] }> = []
+    for (const client of filteredClients) {
+      const letter = getSurnameInitial(client.name)
+      const last = groups[groups.length - 1]
+      if (last && last.letter === letter) last.clients.push(client)
+      else groups.push({ letter, clients: [client] })
+    }
+    return groups
+  }, [filteredClients])
+
   function openNewClient() {
     setDialogOpen(true)
   }
@@ -229,42 +241,56 @@ export function ClientsPage() {
         </div>
 
         {filteredClients.length ? (
-          <div className="client-grid">
-            {filteredClients.map((client) => {
-              const names = contactsByClient.get(client.id) ?? []
-              return (
-                <Link
-                  key={client.id}
-                  to={`/clients/${client.id}`}
-                  className="client-card"
-                >
-                  <div className="client-card-top">
-                    <span className="client-category-list">
-                      {client.categories.map((item) => (
-                        <span
-                          key={item}
-                          className={`client-category is-${item}`}
-                        >
-                          {clientCategoryLabels[item]}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="client-contact-count">
-                      <Users size={14} aria-hidden="true" />
-                      {names.length} 位联系人
-                    </span>
-                  </div>
-                  <h2>{client.name}</h2>
-                  <p className="client-address">
-                    <MapPin size={14} aria-hidden="true" />
-                    {client.address || '地址未记录'}
-                  </p>
-                  <p className="client-contact-names">
-                    {names.length ? names.join('、') : '还没有联系人'}
-                  </p>
-                </Link>
-              )
-            })}
+          <div className="client-groups">
+            {clientGroups.map((group) => (
+              <section
+                key={group.letter}
+                className="client-group"
+                aria-label={`${group.letter} 开头的公司`}
+              >
+                <div className="alphabet-heading">
+                  <span>{group.letter}</span>
+                  <i />
+                </div>
+                <div className="client-grid">
+                  {group.clients.map((client) => {
+                    const names = contactsByClient.get(client.id) ?? []
+                    return (
+                      <Link
+                        key={client.id}
+                        to={`/clients/${client.id}`}
+                        className="client-card"
+                      >
+                        <div className="client-card-top">
+                          <span className="client-category-list">
+                            {client.categories.map((item) => (
+                              <span
+                                key={item}
+                                className={`client-category is-${item}`}
+                              >
+                                {clientCategoryLabels[item]}
+                              </span>
+                            ))}
+                          </span>
+                          <span className="client-contact-count">
+                            <Users size={14} aria-hidden="true" />
+                            {names.length} 位联系人
+                          </span>
+                        </div>
+                        <h2>{client.name}</h2>
+                        <p className="client-address">
+                          <MapPin size={14} aria-hidden="true" />
+                          {client.address || '地址未记录'}
+                        </p>
+                        <p className="client-contact-names">
+                          {names.length ? names.join('、') : '还没有联系人'}
+                        </p>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         ) : (
           <div className="empty-state clients-empty">

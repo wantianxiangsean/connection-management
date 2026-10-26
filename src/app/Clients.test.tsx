@@ -305,6 +305,11 @@ describe('clients and partners', () => {
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent),
     ).toEqual(['星野设计', '远山物流', '中软国际'])
+    expect(
+      [...document.querySelectorAll('.client-group .alphabet-heading span')].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(['X', 'Y', 'Z'])
 
     const tabs = screen.getByRole('navigation', { name: '客户类别' })
     const cardNames = () =>
@@ -314,9 +319,19 @@ describe('clients and partners', () => {
 
     await user.click(within(tabs).getByRole('button', { name: /供应商/ }))
     expect(cardNames()).toEqual(['远山物流', '中软国际'])
+    expect(
+      [...document.querySelectorAll('.client-group .alphabet-heading span')].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(['Y', 'Z'])
 
     await user.click(within(tabs).getByRole('button', { name: /客户/ }))
     expect(cardNames()).toEqual(['星野设计'])
+    expect(
+      [...document.querySelectorAll('.client-group .alphabet-heading span')].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(['X'])
 
     await user.click(within(tabs).getByRole('button', { name: /伙伴/ }))
     expect(cardNames()).toEqual(['星野设计'])
