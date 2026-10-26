@@ -56,6 +56,8 @@ export function SettingsPage() {
     saveNow,
   } = useWorkspace()
   const location = useLocation()
+  const cameFromClients =
+    (location.state as { from?: string } | null)?.from === 'clients'
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [duplicateChoices, setDuplicateChoices] = useState<
@@ -320,9 +322,13 @@ export function SettingsPage() {
   return (
     <main className="settings-page settings-wide">
       <header className="settings-heading">
-        <Link to="/" className="back-link settings-back-link" aria-label="人脉">
+        <Link
+          to={cameFromClients ? '/clients' : '/'}
+          className="back-link settings-back-link"
+          aria-label={cameFromClients ? '返回客户/伙伴' : '人脉'}
+        >
           <ArrowLeft size={17} aria-hidden="true" />
-          返回人脉
+          {cameFromClients ? '返回客户/伙伴' : '返回人脉'}
         </Link>
         <h1>设置</h1>
       </header>

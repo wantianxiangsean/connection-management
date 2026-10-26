@@ -169,6 +169,7 @@ export function ClientsPage() {
           </button>
           <Link
             to="/settings"
+            state={{ from: 'clients' }}
             className="button settings-entry-button"
             aria-label="设置"
             title="设置"

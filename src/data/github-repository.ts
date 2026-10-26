@@ -96,10 +96,10 @@ export class GitHubRepository implements WorkspaceRepository {
     let response = await this.putContents(token, content)
     for (
       let retry = 1;
-      retry <= 3 && response.status === 409;
+      retry <= 5 && response.status === 409;
       retry += 1
     ) {
-      await delay(retry * 120)
+      await delay(300 * 2 ** (retry - 1) + Math.floor(Math.random() * 150))
       response = await this.putContents(token, content)
     }
     if (!response.ok) {
@@ -310,7 +310,7 @@ async function createGitHubWriteError(response: Response) {
         : response.status === 404
           ? '未找到云端数据文件（404），请确认数据仓库和 main 分支存在。'
           : response.status === 409
-            ? '云端文件版本冲突（409），请稍后再次备份。'
+            ? '云端文件版本冲突（409）：可能另一台设备刚保存过。已自动重试多次仍未成功，请稍后再点一次“手动备份”；本机修改会保留。'
             : response.status === 422
               ? 'GitHub 无法接受这次写入（422）。'
               : response.status === 429

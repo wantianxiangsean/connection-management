@@ -37,6 +37,11 @@ describe('clients and partners', () => {
 
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
+
+    const back = screen.getByRole('link', { name: '返回客户/伙伴' })
+    expect(back).toHaveAttribute('href', '#/clients')
+    await user.click(back)
+    await screen.findByRole('heading', { name: '客户/伙伴' })
   })
 
   it('creates a client with a linked and an independent contact', async () => {
@@ -302,13 +307,19 @@ describe('clients and partners', () => {
     ).toEqual(['星野设计', '远山物流', '中软国际'])
 
     const tabs = screen.getByRole('navigation', { name: '客户类别' })
+    const cardNames = () =>
+      screen
+        .getAllByRole('heading', { level: 2 })
+        .map((item) => item.textContent)
+
     await user.click(within(tabs).getByRole('button', { name: /供应商/ }))
-    expect(screen.getByText('远山物流')).toBeInTheDocument()
-    expect(screen.queryByText('星野设计')).not.toBeInTheDocument()
+    expect(cardNames()).toEqual(['远山物流', '中软国际'])
+
+    await user.click(within(tabs).getByRole('button', { name: /客户/ }))
+    expect(cardNames()).toEqual(['星野设计'])
 
     await user.click(within(tabs).getByRole('button', { name: /伙伴/ }))
-    expect(screen.getByText('星野设计')).toBeInTheDocument()
-    expect(screen.queryByText('远山物流')).not.toBeInTheDocument()
+    expect(cardNames()).toEqual(['星野设计'])
 
     await user.click(within(tabs).getByRole('button', { name: /全部/ }))
     await user.type(screen.getByLabelText('搜索客户'), '静安')
