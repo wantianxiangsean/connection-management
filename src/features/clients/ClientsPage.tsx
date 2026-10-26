@@ -5,6 +5,7 @@ import {
   Plus,
   Search,
   Settings,
+  Tag,
   Users,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -255,6 +256,8 @@ export function ClientsPage() {
                 <div className="client-grid">
                   {group.clients.map((client) => {
                     const names = contactsByClient.get(client.id) ?? []
+                    const industries =
+                      industriesByClient.get(client.id) ?? []
                     return (
                       <Link
                         key={client.id}
@@ -268,6 +271,12 @@ export function ClientsPage() {
                             {names.length} 位联系人
                           </span>
                         </div>
+                        {industries.length ? (
+                          <p className="client-industry">
+                            <Tag size={14} aria-hidden="true" />
+                            行业 · {industries.join('、')}
+                          </p>
+                        ) : null}
                         <span className="client-category-list">
                           {client.categories.map((item) => (
                             <span

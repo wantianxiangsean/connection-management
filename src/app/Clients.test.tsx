@@ -310,6 +310,7 @@ describe('clients and partners', () => {
         (item) => item.textContent,
       ),
     ).toEqual(['X', 'Y', 'Z'])
+    expect(screen.getByText(/智能硬件、家居/)).toBeInTheDocument()
 
     const tabs = screen.getByRole('navigation', { name: '客户类别' })
     const cardNames = () =>

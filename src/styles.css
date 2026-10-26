@@ -3278,6 +3278,20 @@ button.data-action-card {
   margin-top: 2px;
 }
 
+.client-industry {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.client-industry svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .client-contact-names {
   display: -webkit-box;
   overflow: hidden;
