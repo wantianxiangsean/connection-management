@@ -1,6 +1,17 @@
 import type {
+  Client,
+  ClientArtifact,
+  ClientArtifactKind,
+  ClientCategory,
+  ClientContact,
+  ClientInteraction,
+  ClientSolutionProduct,
+  ClientTodo,
   Connection,
+  ContactAttitude,
   DatabaseSnapshot,
+  Influence,
+  InteractionChannel,
   Person,
   PersonBundle,
   RelationshipTier,
@@ -18,6 +29,14 @@ function nowIso() {
   return new Date().toISOString()
 }
 
+function nextPosition(items: Array<{ position: number }>) {
+  return items.reduce((max, item) => Math.max(max, item.position + 1), 0)
+}
+
+function topPosition(items: Array<{ position: number }>) {
+  return items.reduce((min, item) => Math.min(min, item.position - 1), 0)
+}
+
 export function emptySnapshot(): DatabaseSnapshot {
   return {
     people: [],
@@ -29,9 +48,58 @@ export function emptySnapshot(): DatabaseSnapshot {
     importantDates: [],
     detailEntries: [],
     attachments: [],
+    clients: [],
+    clientContacts: [],
+    clientArtifacts: [],
+    clientSolutionProducts: [],
+    clientInteractions: [],
+    clientTodos: [],
     customFields: [],
     customValues: [],
   }
+}
+
+export function normalizeSnapshot(source: DatabaseSnapshot): DatabaseSnapshot {
+  return {
+    ...emptySnapshot(),
+    ...source,
+    clients: (source.clients ?? []).map(normalizeClient),
+    clientContacts: (source.clientContacts ?? []).map(normalizeClientContact),
+    clientArtifacts: (source.clientArtifacts ?? []).map((artifact) => ({
+      ...artifact,
+      industry: artifact.industry ?? '',
+      position: artifact.position ?? 0,
+    })),
+    clientSolutionProducts: source.clientSolutionProducts ?? [],
+    clientInteractions: (source.clientInteractions ?? []).map((item) => ({
+      ...item,
+      position: item.position ?? 0,
+    })),
+    clientTodos: (source.clientTodos ?? []).map((item) => ({
+      ...item,
+      position: item.position ?? 0,
+    })),
+  }
+}
+
+function normalizeClientContact(contact: ClientContact): ClientContact {
+  return {
+    ...contact,
+    title: contact.title ?? '',
+    influence: contact.influence ?? null,
+    attitude: contact.attitude ?? 'neutral',
+    note: contact.note ?? '',
+    position: contact.position ?? 0,
+  }
+}
+
+function normalizeClient(client: Client & { category?: ClientCategory }): Client {
+  const categories: ClientCategory[] = client.categories
+    ? Array.from(new Set(client.categories))
+    : client.category
+      ? [client.category]
+      : ['customer']
+  return { ...client, categories }
 }
 
 export function createPersonRecord(
@@ -316,6 +384,387 @@ export function removeCustomField(
   return snapshot
 }
 
+export function createClientRecord(input: {
+  name: string
+  address?: string
+  categories?: ClientCategory[]
+}): Client {
+  const timestamp = nowIso()
+  return {
+    id: id('client'),
+    name: input.name.trim(),
+    address: input.address?.trim() ?? '',
+    categories: Array.from(new Set(input.categories ?? ['customer'])),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
+
+export function upsertClient(
+  source: DatabaseSnapshot,
+  client: Pick<Client, 'id' | 'name' | 'address' | 'categories'>,
+) {
+  const snapshot = clone(source)
+  const index = snapshot.clients.findIndex((item) => item.id === client.id)
+  const next: Client = {
+    ...client,
+    name: client.name.trim(),
+    address: client.address.trim(),
+    categories: Array.from(new Set(client.categories)),
+    createdAt: index >= 0 ? snapshot.clients[index].createdAt : nowIso(),
+    updatedAt: nowIso(),
+  }
+  if (index >= 0) snapshot.clients[index] = next
+  else snapshot.clients.push(next)
+  return snapshot
+}
+
+export function deleteClient(source: DatabaseSnapshot, clientId: string) {
+  const snapshot = clone(source)
+  snapshot.clients = snapshot.clients.filter((item) => item.id !== clientId)
+  snapshot.clientContacts = snapshot.clientContacts.filter(
+    (item) => item.clientId !== clientId,
+  )
+  snapshot.clientArtifacts = snapshot.clientArtifacts.filter(
+    (item) => item.clientId !== clientId,
+  )
+  snapshot.clientSolutionProducts = snapshot.clientSolutionProducts.filter(
+    (item) => item.clientId !== clientId,
+  )
+  snapshot.clientInteractions = snapshot.clientInteractions.filter(
+    (item) => item.clientId !== clientId,
+  )
+  snapshot.clientTodos = snapshot.clientTodos.filter(
+    (item) => item.clientId !== clientId,
+  )
+  return snapshot
+}
+
+interface ClientContactDetails {
+  title?: string
+  influence?: Influence | null
+  attitude?: ContactAttitude
+  note?: string
+}
+
+function contactDetails(
+  target: ClientContactDetails,
+  fallback: ClientContactDetails = {},
+): Pick<ClientContact, 'title' | 'influence' | 'attitude' | 'note'> {
+  return {
+    title: (target.title ?? fallback.title ?? '').trim(),
+    influence: target.influence ?? fallback.influence ?? null,
+    attitude: target.attitude ?? fallback.attitude ?? 'neutral',
+    note: (target.note ?? fallback.note ?? '').trim(),
+  }
+}
+
+export function addClientContact(
+  source: DatabaseSnapshot,
+  clientId: string,
+  target: ({ personId: string } & ClientContactDetails) | ({ name: string } & ClientContactDetails),
+) {
+  const snapshot = clone(source)
+  if (!snapshot.clients.some((item) => item.id === clientId)) {
+    throw new Error('客户不存在')
+  }
+  const position = nextPosition(
+    snapshot.clientContacts.filter((item) => item.clientId === clientId),
+  )
+
+  let contact: ClientContact
+  if ('personId' in target) {
+    const person = snapshot.people.find((item) => item.id === target.personId)
+    if (!person) throw new Error('人脉中找不到这个人')
+    if (
+      snapshot.clientContacts.some(
+        (item) =>
+          item.clientId === clientId && item.personId === target.personId,
+      )
+    ) {
+      throw new Error('这个人已经是该客户的联系人')
+    }
+    contact = {
+      id: id('client-contact'),
+      clientId,
+      personId: person.id,
+      name: person.fullName,
+      ...contactDetails(target, {
+        title: person.occupation,
+        influence: person.influence,
+      }),
+      position,
+      createdAt: nowIso(),
+    }
+  } else {
+    const name = target.name.trim()
+    if (!name) throw new Error('请填写联系人姓名')
+    if (
+      snapshot.clientContacts.some(
+        (item) =>
+          item.clientId === clientId &&
+          item.personId === null &&
+          item.name === name,
+      )
+    ) {
+      throw new Error('这个联系人已经在列表里')
+    }
+    contact = {
+      id: id('client-contact'),
+      clientId,
+      personId: null,
+      name,
+      ...contactDetails(target),
+      position,
+      createdAt: nowIso(),
+    }
+  }
+
+  snapshot.clientContacts.push(contact)
+  return snapshot
+}
+
+export function updateClientContact(
+  source: DatabaseSnapshot,
+  contactId: string,
+  patch: { name?: string } & ClientContactDetails,
+) {
+  const snapshot = clone(source)
+  snapshot.clientContacts = snapshot.clientContacts.map((contact) => {
+    if (contact.id !== contactId) return contact
+    return {
+      ...contact,
+      ...contactDetails(patch, contact),
+      name: patch.name?.trim() || contact.name,
+    }
+  })
+  return snapshot
+}
+
+export function removeClientContact(
+  source: DatabaseSnapshot,
+  contactId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.clientContacts = snapshot.clientContacts.filter(
+    (item) => item.id !== contactId,
+  )
+  return snapshot
+}
+
+export function addClientArtifact(
+  source: DatabaseSnapshot,
+  clientId: string,
+  kind: ClientArtifactKind,
+  input: { name: string; note?: string; industry?: string },
+) {
+  const snapshot = clone(source)
+  if (!snapshot.clients.some((item) => item.id === clientId)) {
+    throw new Error('客户不存在')
+  }
+  const name = input.name.trim()
+  if (!name) throw new Error('请填写名称')
+
+  const position = topPosition(
+    snapshot.clientArtifacts.filter(
+      (item) => item.clientId === clientId && item.kind === kind,
+    ),
+  )
+  const timestamp = nowIso()
+  snapshot.clientArtifacts.push({
+    id: id('client-artifact'),
+    clientId,
+    kind,
+    name,
+    note: input.note?.trim() ?? '',
+    industry: input.industry?.trim() ?? '',
+    position,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  } satisfies ClientArtifact)
+  return snapshot
+}
+
+export function attachProductToSolution(
+  source: DatabaseSnapshot,
+  solutionId: string,
+  productId: string,
+) {
+  const snapshot = clone(source)
+  const solution = snapshot.clientArtifacts.find(
+    (item) => item.id === solutionId && item.kind === 'solution',
+  )
+  const product = snapshot.clientArtifacts.find(
+    (item) => item.id === productId && item.kind === 'product',
+  )
+  if (!solution || !product) throw new Error('方案或产品不存在')
+  if (solution.clientId !== product.clientId) {
+    throw new Error('方案与产品不属于同一个客户')
+  }
+  const exists = snapshot.clientSolutionProducts.some(
+    (item) =>
+      item.solutionId === solutionId && item.productId === productId,
+  )
+  if (!exists) {
+    snapshot.clientSolutionProducts.push({
+      id: id('client-solution-product'),
+      clientId: solution.clientId,
+      solutionId,
+      productId,
+    } satisfies ClientSolutionProduct)
+  }
+  return snapshot
+}
+
+export function detachProductFromSolution(
+  source: DatabaseSnapshot,
+  solutionId: string,
+  productId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.clientSolutionProducts = snapshot.clientSolutionProducts.filter(
+    (item) =>
+      !(item.solutionId === solutionId && item.productId === productId),
+  )
+  return snapshot
+}
+
+export function removeClientArtifact(
+  source: DatabaseSnapshot,
+  artifactId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.clientArtifacts = snapshot.clientArtifacts.filter(
+    (item) => item.id !== artifactId,
+  )
+  snapshot.clientSolutionProducts = snapshot.clientSolutionProducts.filter(
+    (item) =>
+      item.solutionId !== artifactId && item.productId !== artifactId,
+  )
+  return snapshot
+}
+
+export function addClientInteraction(
+  source: DatabaseSnapshot,
+  clientId: string,
+  input: {
+    occurredOn: string
+    channel: InteractionChannel
+    summary: string
+  },
+) {
+  const snapshot = clone(source)
+  if (!snapshot.clients.some((item) => item.id === clientId)) {
+    throw new Error('客户不存在')
+  }
+  const summary = input.summary.trim()
+  if (!summary) throw new Error('请填写互动内容')
+  const position = topPosition(
+    snapshot.clientInteractions.filter((item) => item.clientId === clientId),
+  )
+  snapshot.clientInteractions.push({
+    id: id('client-interaction'),
+    clientId,
+    occurredOn: input.occurredOn,
+    channel: input.channel,
+    summary,
+    position,
+    createdAt: nowIso(),
+  } satisfies ClientInteraction)
+  return snapshot
+}
+
+export function removeClientInteraction(
+  source: DatabaseSnapshot,
+  interactionId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.clientInteractions = snapshot.clientInteractions.filter(
+    (item) => item.id !== interactionId,
+  )
+  return snapshot
+}
+
+export function addClientTodo(
+  source: DatabaseSnapshot,
+  clientId: string,
+  titleInput: string,
+) {
+  const snapshot = clone(source)
+  if (!snapshot.clients.some((item) => item.id === clientId)) {
+    throw new Error('客户不存在')
+  }
+  const title = titleInput.trim()
+  if (!title) throw new Error('请填写待办内容')
+  snapshot.clientTodos.push({
+    id: id('client-todo'),
+    clientId,
+    title,
+    done: false,
+    position: nextPosition(
+      snapshot.clientTodos.filter((item) => item.clientId === clientId),
+    ),
+    createdAt: nowIso(),
+  } satisfies ClientTodo)
+  return snapshot
+}
+
+export function updateClientTodo(
+  source: DatabaseSnapshot,
+  todoId: string,
+  titleInput: string,
+) {
+  const title = titleInput.trim()
+  if (!title) return source
+  const snapshot = clone(source)
+  snapshot.clientTodos = snapshot.clientTodos.map((item) =>
+    item.id === todoId ? { ...item, title } : item,
+  )
+  return snapshot
+}
+
+export function toggleClientTodo(source: DatabaseSnapshot, todoId: string) {
+  const snapshot = clone(source)
+  snapshot.clientTodos = snapshot.clientTodos.map((item) =>
+    item.id === todoId ? { ...item, done: !item.done } : item,
+  )
+  return snapshot
+}
+
+export function removeClientTodo(
+  source: DatabaseSnapshot,
+  todoId: string,
+) {
+  const snapshot = clone(source)
+  snapshot.clientTodos = snapshot.clientTodos.filter(
+    (item) => item.id !== todoId,
+  )
+  return snapshot
+}
+
+export function reorderClientItems(
+  source: DatabaseSnapshot,
+  orderedIds: string[],
+) {
+  const snapshot = clone(source)
+  const positions = new Map(
+    orderedIds.map((itemId, index) => [itemId, index]),
+  )
+  const applyOrder = <T extends { id: string; position: number }>(
+    items: T[],
+  ) =>
+    items.map((item) =>
+      positions.has(item.id)
+        ? { ...item, position: positions.get(item.id)! }
+        : item,
+    )
+  snapshot.clientContacts = applyOrder(snapshot.clientContacts)
+  snapshot.clientArtifacts = applyOrder(snapshot.clientArtifacts)
+  snapshot.clientTodos = applyOrder(snapshot.clientTodos)
+  snapshot.clientInteractions = applyOrder(snapshot.clientInteractions)
+  return snapshot
+}
+
 function removePeopleAndRelatedData(
   source: DatabaseSnapshot,
   idsToPurge: Set<string>,
@@ -354,6 +803,11 @@ function removePeopleAndRelatedData(
   )
   snapshot.customValues = snapshot.customValues.filter(
     (item) => !belongsToPurged(item.personId),
+  )
+  snapshot.clientContacts = snapshot.clientContacts.map((contact) =>
+    contact.personId && idsToPurge.has(contact.personId)
+      ? { ...contact, personId: null }
+      : contact,
   )
 
   return snapshot

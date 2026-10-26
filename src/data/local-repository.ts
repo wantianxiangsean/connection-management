@@ -104,6 +104,12 @@ function createEmptyLocalSnapshot(): DatabaseSnapshot {
     importantDates: [],
     detailEntries: [],
     attachments: [],
+    clients: [],
+    clientContacts: [],
+    clientArtifacts: [],
+    clientSolutionProducts: [],
+    clientInteractions: [],
+    clientTodos: [],
     customFields: [],
     customValues: [],
   }

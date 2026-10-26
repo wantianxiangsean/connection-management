@@ -18,6 +18,12 @@ export type CustomFieldType =
 export type GoalStatus = 'active' | 'achieved' | 'paused'
 export type InteractionChannel = 'meeting' | 'call' | 'message' | 'other'
 export type CoachState = 'due' | 'soon' | 'steady' | 'unset' | 'snoozed'
+export type ClientCategory =
+  | 'customer'
+  | 'channel'
+  | 'partner'
+  | 'supplier'
+  | 'competitor'
 
 export interface Person {
   id: string
@@ -119,6 +125,70 @@ export interface DetailEntry {
   updatedAt: string
 }
 
+export interface Client {
+  id: string
+  name: string
+  address: string
+  categories: ClientCategory[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type ContactAttitude = 'positive' | 'neutral' | 'negative'
+
+export interface ClientContact {
+  id: string
+  clientId: string
+  personId: string | null
+  name: string
+  title: string
+  influence: Influence | null
+  attitude: ContactAttitude
+  note: string
+  position: number
+  createdAt: string
+}
+
+export type ClientArtifactKind = 'project' | 'product' | 'solution'
+
+export interface ClientArtifact {
+  id: string
+  clientId: string
+  kind: ClientArtifactKind
+  name: string
+  note: string
+  industry: string
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ClientSolutionProduct {
+  id: string
+  clientId: string
+  solutionId: string
+  productId: string
+}
+
+export interface ClientInteraction {
+  id: string
+  clientId: string
+  occurredOn: string
+  channel: InteractionChannel
+  summary: string
+  position: number
+  createdAt: string
+}
+
+export interface ClientTodo {
+  id: string
+  clientId: string
+  title: string
+  done: boolean
+  position: number
+  createdAt: string
+}
+
 export interface Attachment {
   id: string
   personId: string
@@ -179,6 +249,12 @@ export interface DatabaseSnapshot {
   importantDates: ImportantDate[]
   detailEntries: DetailEntry[]
   attachments: Attachment[]
+  clients: Client[]
+  clientContacts: ClientContact[]
+  clientArtifacts: ClientArtifact[]
+  clientSolutionProducts: ClientSolutionProduct[]
+  clientInteractions: ClientInteraction[]
+  clientTodos: ClientTodo[]
   customFields: CustomFieldDefinition[]
   customValues: CustomFieldValue[]
 }
@@ -230,4 +306,24 @@ export const channelLabels: Record<InteractionChannel, string> = {
   call: '通话',
   message: '消息',
   other: '其他',
+}
+
+export const clientCategoryLabels: Record<ClientCategory, string> = {
+  customer: '客户',
+  channel: '渠道',
+  partner: '伙伴',
+  supplier: '供应商',
+  competitor: '友商',
+}
+
+export const clientArtifactLabels: Record<ClientArtifactKind, string> = {
+  project: '项目',
+  product: '产品',
+  solution: '方案',
+}
+
+export const contactAttitudeLabels: Record<ContactAttitude, string> = {
+  positive: '正向',
+  neutral: '中立',
+  negative: '负向',
 }

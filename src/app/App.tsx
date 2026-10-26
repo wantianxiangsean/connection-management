@@ -10,6 +10,8 @@ import type {
   WorkspaceRepository,
 } from '../data/repository'
 import { ArchivePage } from '../features/archive/ArchivePage'
+import { ClientDetailPage } from '../features/clients/ClientDetailPage'
+import { ClientsPage } from '../features/clients/ClientsPage'
 import { PersonPage } from '../features/person/PersonPage'
 import { AppLayout } from './AppLayout'
 import { SettingsPage } from './SettingsPage'
@@ -45,6 +47,8 @@ export function App({
             >
               <Route index element={<ArchivePage />} />
               <Route path="people/:personId" element={<PersonPage />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="clients/:clientId" element={<ClientDetailPage />} />
               <Route path="settings/*" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

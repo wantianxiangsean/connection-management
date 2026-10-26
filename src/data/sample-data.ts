@@ -288,6 +288,12 @@ export function createSampleSnapshot(): DatabaseSnapshot {
       },
     ],
     attachments: [],
+    clients: [],
+    clientContacts: [],
+    clientArtifacts: [],
+    clientSolutionProducts: [],
+    clientInteractions: [],
+    clientTodos: [],
     customFields: [
       {
         id: 'field-source',

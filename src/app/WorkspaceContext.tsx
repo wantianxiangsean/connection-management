@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { DatabaseSnapshot } from '../domain/types'
+import { normalizeSnapshot } from '../domain/workspace'
 import type {
   SessionUser,
   WorkspaceRepository,
@@ -64,6 +65,7 @@ export function WorkspaceProvider({
 
   useEffect(() => {
     if (query.data) {
+      const data = normalizeSnapshot(query.data)
       const current = snapshotRef.current
       if (
         current &&
@@ -74,10 +76,10 @@ export function WorkspaceProvider({
         void saveQueue.current?.enqueue(current)
         return
       }
-      snapshotRef.current = query.data
-      setSnapshot(query.data)
+      snapshotRef.current = data
+      setSnapshot(data)
       if (repository.hasPendingCloud?.()) {
-        void saveQueue.current?.enqueue(query.data)
+        void saveQueue.current?.enqueue(data)
       }
     }
   }, [query.data, repository])

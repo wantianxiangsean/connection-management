@@ -2,6 +2,7 @@ import {
   CalendarDays,
   ChevronDown,
   Filter,
+  Handshake,
   Pencil,
   Plus,
   Search,
@@ -520,6 +521,10 @@ export function ArchivePage() {
           </p>
         </div>
         <div className="page-heading-actions">
+          <Link to="/clients" className="button client-entry-button">
+            <Handshake size={17} aria-hidden="true" />
+            客户/伙伴
+          </Link>
           <button className="button primary" type="button" onClick={() => setAddOpen(true)}>
             <Plus size={18} aria-hidden="true" />
             新增人员
