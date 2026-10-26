@@ -13,15 +13,18 @@ import {
   influenceLabels,
   tierLabels,
   type ContactAttitude,
+  type ContactMethod,
   type Influence,
   type Person,
 } from '../../domain/types'
+import { ContactMethodEditor } from './ContactMethodEditor'
 
 interface ContactDetails {
   title: string
   influence: Influence | null
   attitude: ContactAttitude
   note: string
+  methods: ContactMethod[]
 }
 
 export function ClientContactDialog({
@@ -51,6 +54,7 @@ export function ClientContactDialog({
     influence: null,
     attitude: 'neutral',
     note: '',
+    methods: [],
   })
   const listId = useId()
   const filteredCandidates = useMemo(
@@ -117,6 +121,7 @@ export function ClientContactDialog({
       influence: null,
       attitude: 'neutral',
       note: '',
+      methods: [],
     })
   }
 
@@ -314,6 +319,12 @@ export function ClientContactDialog({
             </select>
           </label>
         </div>
+        <ContactMethodEditor
+          value={details.methods}
+          onChange={(methods) =>
+            setDetails((current) => ({ ...current, methods }))
+          }
+        />
         <label>
           <span>备注</span>
           <textarea

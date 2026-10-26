@@ -436,6 +436,11 @@ describe('clients and partners', () => {
       influence: 'medium',
       attitude: 'negative',
       note: '对价格敏感',
+      methods: [
+        { id: 'method-1', type: 'phone', value: ' 13800138000 ' },
+        { id: 'method-2', type: 'email', value: 'wang@example.com' },
+        { id: 'method-3', type: 'wechat', value: '   ' },
+      ],
     })
     const independent = snapshot.clientContacts[1]
     expect(independent).toMatchObject({
@@ -444,10 +449,15 @@ describe('clients and partners', () => {
       attitude: 'negative',
       note: '对价格敏感',
     })
+    expect(independent.methods).toEqual([
+      { id: 'method-1', type: 'phone', value: '13800138000' },
+      { id: 'method-2', type: 'email', value: 'wang@example.com' },
+    ])
 
     snapshot = updateClientContact(snapshot, independent.id, {
       title: '采购负责人',
       attitude: 'positive',
+      methods: [{ id: 'method-2', type: 'email', value: 'wang@example.com' }],
     })
     expect(snapshot.clientContacts[1]).toMatchObject({
       title: '采购负责人',
@@ -455,6 +465,9 @@ describe('clients and partners', () => {
       attitude: 'positive',
       note: '对价格敏感',
     })
+    expect(snapshot.clientContacts[1].methods).toEqual([
+      { id: 'method-2', type: 'email', value: 'wang@example.com' },
+    ])
   })
 
   it('records client interactions', () => {
@@ -600,6 +613,7 @@ describe('clients and partners', () => {
       influence: null,
       attitude: 'neutral',
       note: '',
+      methods: [],
     })
   })
 })

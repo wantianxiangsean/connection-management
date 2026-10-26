@@ -9,6 +9,7 @@ import type {
   ClientTodo,
   Connection,
   ContactAttitude,
+  ContactMethod,
   DatabaseSnapshot,
   Influence,
   InteractionChannel,
@@ -89,6 +90,7 @@ function normalizeClientContact(contact: ClientContact): ClientContact {
     influence: contact.influence ?? null,
     attitude: contact.attitude ?? 'neutral',
     note: contact.note ?? '',
+    methods: contact.methods ?? [],
     position: contact.position ?? 0,
   }
 }
@@ -445,17 +447,34 @@ interface ClientContactDetails {
   influence?: Influence | null
   attitude?: ContactAttitude
   note?: string
+  methods?: ContactMethod[]
+}
+
+function normalizeContactMethods(methods: ContactMethod[]) {
+  return methods
+    .map((method) => ({
+      id: method.id || `method-${crypto.randomUUID()}`,
+      type: method.type,
+      value: method.value.trim(),
+    }))
+    .filter((method) => method.value)
 }
 
 function contactDetails(
   target: ClientContactDetails,
   fallback: ClientContactDetails = {},
-): Pick<ClientContact, 'title' | 'influence' | 'attitude' | 'note'> {
+): Pick<
+  ClientContact,
+  'title' | 'influence' | 'attitude' | 'note' | 'methods'
+> {
   return {
     title: (target.title ?? fallback.title ?? '').trim(),
     influence: target.influence ?? fallback.influence ?? null,
     attitude: target.attitude ?? fallback.attitude ?? 'neutral',
     note: (target.note ?? fallback.note ?? '').trim(),
+    methods: normalizeContactMethods(
+      target.methods ?? fallback.methods ?? [],
+    ),
   }
 }
 

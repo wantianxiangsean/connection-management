@@ -3497,6 +3497,88 @@ button.data-action-card {
   line-height: 1.6;
 }
 
+.client-contact-methods {
+  display: grid;
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.client-contact-method {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.client-contact-method-type {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+}
+
+.client-contact-method a {
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+}
+
+.client-contact-method a:hover {
+  color: var(--seal);
+}
+
+.contact-method-editor {
+  display: grid;
+  gap: 9px;
+}
+
+.contact-method-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.contact-method-editor-heading .text-button {
+  font-size: 0.8125rem;
+}
+
+.contact-method-row {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  grid-template-columns: 92px minmax(0, 1fr) 30px;
+}
+
+.contact-method-row select,
+.contact-method-row input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--paper);
+  padding: 9px 10px;
+  font-size: 0.875rem;
+}
+
+.contact-method-row select:focus,
+.contact-method-row input:focus {
+  border-color: var(--pine);
+  box-shadow: 0 0 0 3px rgba(47, 106, 88, 0.08);
+}
+
+.contact-method-remove {
+  width: 30px;
+  height: 30px;
+  color: var(--ink-faint);
+}
+
+.contact-method-empty {
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+}
+
 .client-item-actions {
   display: flex;
   flex: 0 0 auto;

@@ -5,8 +5,10 @@ import {
   influenceLabels,
   type ClientContact,
   type ContactAttitude,
+  type ContactMethod,
   type Influence,
 } from '../../domain/types'
+import { ContactMethodEditor } from './ContactMethodEditor'
 
 export function ClientContactEditDialog({
   contact,
@@ -23,6 +25,7 @@ export function ClientContactEditDialog({
     influence: Influence | null
     attitude: ContactAttitude
     note: string
+    methods: ContactMethod[]
   }) => void
 }) {
   const [name, setName] = useState(contact.name)
@@ -32,6 +35,7 @@ export function ClientContactEditDialog({
   )
   const [attitude, setAttitude] = useState<ContactAttitude>(contact.attitude)
   const [note, setNote] = useState(contact.note)
+  const [methods, setMethods] = useState<ContactMethod[]>(contact.methods)
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -42,6 +46,7 @@ export function ClientContactEditDialog({
       influence: influence === '' ? null : influence,
       attitude,
       note: note.trim(),
+      methods,
     })
   }
 
@@ -107,6 +112,7 @@ export function ClientContactEditDialog({
             </select>
           </label>
         </div>
+        <ContactMethodEditor value={methods} onChange={setMethods} />
         <label>
           <span>备注</span>
           <textarea

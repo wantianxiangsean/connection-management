@@ -188,6 +188,57 @@ describe('clients and partners', () => {
     expect(screen.getByText('李工')).toBeInTheDocument()
   })
 
+  it('stores multiple contact methods', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
+    const clientDialog = await screen.findByRole('dialog', {
+      name: '新增客户',
+    })
+    await user.type(
+      within(clientDialog).getByLabelText('名称'),
+      '青禾科技',
+    )
+    await user.click(within(clientDialog).getByLabelText('客户'))
+    await user.click(
+      within(clientDialog).getByRole('button', { name: '保存' }),
+    )
+    await screen.findByRole('heading', { name: '青禾科技' })
+
+    await user.click(screen.getByRole('button', { name: '添加联系人' }))
+    const dialog = await screen.findByRole('dialog', { name: '添加联系人' })
+    await user.type(within(dialog).getByLabelText(/联系人姓名/), '王经理')
+    await user.click(within(dialog).getByRole('button', { name: /添加/ }))
+
+    let methodInputs = within(dialog).getAllByLabelText('联系方式内容')
+    await user.type(methodInputs[0], '13800138000')
+
+    await user.click(within(dialog).getByRole('button', { name: /添加/ }))
+    const typeSelects = within(dialog).getAllByLabelText('联系方式类型')
+    await user.selectOptions(typeSelects[1], 'email')
+    methodInputs = within(dialog).getAllByLabelText('联系方式内容')
+    await user.type(methodInputs[1], 'wang@example.com')
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+
+    expect(await screen.findByText('13800138000')).toBeInTheDocument()
+    expect(screen.getByText('wang@example.com')).toBeInTheDocument()
+    expect(screen.getByText('电话')).toBeInTheDocument()
+    expect(screen.getByText('邮箱')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '编辑联系人 王经理' }))
+    const editDialog = await screen.findByRole('dialog', {
+      name: '编辑联系人',
+    })
+    const removeButtons = within(editDialog).getAllByLabelText('删除联系方式')
+    await user.click(removeButtons[0])
+    await user.click(
+      within(editDialog).getByRole('button', { name: '保存' }),
+    )
+
+    expect(await screen.findByText('wang@example.com')).toBeInTheDocument()
+    expect(screen.queryByText('13800138000')).not.toBeInTheDocument()
+  })
+
   it('edits a client and deletes it without touching the person archive', async () => {
     const user = await openClients()
 
@@ -268,6 +319,7 @@ describe('clients and partners', () => {
         influence: null,
         attitude: 'neutral',
         note: '',
+        methods: [],
         position: 0,
         createdAt: '2026-10-01T00:00:00.000Z',
       },

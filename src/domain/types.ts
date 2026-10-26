@@ -135,6 +135,13 @@ export interface Client {
 }
 
 export type ContactAttitude = 'positive' | 'neutral' | 'negative'
+export type ContactMethodType = 'phone' | 'email' | 'wechat' | 'other'
+
+export interface ContactMethod {
+  id: string
+  type: ContactMethodType
+  value: string
+}
 
 export interface ClientContact {
   id: string
@@ -145,6 +152,7 @@ export interface ClientContact {
   influence: Influence | null
   attitude: ContactAttitude
   note: string
+  methods: ContactMethod[]
   position: number
   createdAt: string
 }
@@ -326,4 +334,11 @@ export const contactAttitudeLabels: Record<ContactAttitude, string> = {
   positive: '正向',
   neutral: '中立',
   negative: '负向',
+}
+
+export const contactMethodLabels: Record<ContactMethodType, string> = {
+  phone: '电话',
+  email: '邮箱',
+  wechat: '微信',
+  other: '其他',
 }

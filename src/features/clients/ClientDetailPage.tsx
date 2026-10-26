@@ -37,6 +37,7 @@ import {
   clientArtifactLabels,
   clientCategoryLabels,
   contactAttitudeLabels,
+  contactMethodLabels,
   influenceLabels,
   tierLabels,
   type ClientArtifact,
@@ -550,6 +551,31 @@ export function ClientDetailPage() {
                             {contactAttitudeLabels[contact.attitude]}
                           </span>
                         </div>
+                        {contact.methods.length ? (
+                          <div className="client-contact-methods">
+                            {contact.methods.map((method) => (
+                              <span
+                                key={method.id}
+                                className="client-contact-method"
+                              >
+                                <span className="client-contact-method-type">
+                                  {contactMethodLabels[method.type]}
+                                </span>
+                                {method.type === 'phone' ? (
+                                  <a href={`tel:${method.value}`}>
+                                    {method.value}
+                                  </a>
+                                ) : method.type === 'email' ? (
+                                  <a href={`mailto:${method.value}`}>
+                                    {method.value}
+                                  </a>
+                                ) : (
+                                  <span>{method.value}</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                         {contact.note ? (
                           <p className="client-contact-note">
                             {contact.note}
