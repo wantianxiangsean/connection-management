@@ -200,7 +200,7 @@ export function BasicProfileDialog({
 const detailColors = [
   { label: '默认（去掉选中部分的颜色）', value: '' },
   { label: '黑', value: '#111111' },
-  { label: '浅灰', value: '#8b9a95' },
+  { label: '浅灰', value: '#bcc5c1' },
   { label: '红', value: '#E8481F' },
   { label: '橙', value: '#E8A020' },
   { label: '绿', value: '#2E7D32' },
