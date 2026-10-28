@@ -18,6 +18,7 @@ import {
   intimacyLabels,
   tierLabels,
 } from '../../domain/types'
+import { sanitizeDetailHtml } from '../../domain/rich-text'
 import {
   addConnection,
   getPersonBundle,
@@ -264,7 +265,23 @@ export function PersonPage() {
                     </div>
                     <div className="timeline-content">
                       <span className="detail-category">{detail.category}</span>
-                      <p>{detail.content}</p>
+                      <p
+                        style={
+                          detail.color ? { color: detail.color } : undefined
+                        }
+                      >
+                        {detail.contentHtml ? (
+                          <span
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeDetailHtml(
+                                detail.contentHtml,
+                              ),
+                            }}
+                          />
+                        ) : (
+                          detail.content
+                        )}
+                      </p>
                       {detail.followUpOn ? (
                         <small>回访提醒 · {detail.followUpOn}</small>
                       ) : null}

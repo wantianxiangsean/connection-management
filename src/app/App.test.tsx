@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptySnapshot } from '../domain/workspace'
@@ -857,5 +863,63 @@ describe('archive application flow', () => {
     expect(
       within(interactionSection).getAllByText(/关联细节 · 近况/),
     ).toHaveLength(2)
+  })
+
+  it('keeps a chosen text color on a detail entry', async () => {
+    const user = userEvent.setup()
+    render(
+      <App
+        repository={
+          new LocalRepository({
+            storage: localStorage,
+            key: 'app-test',
+            seed: true,
+          })
+        }
+      />,
+    )
+
+    await screen.findByRole('heading', { name: '155人脉管理' })
+    await user.click(screen.getByRole('link', { name: '林知秋' }))
+    const detailSection = screen
+      .getByRole('heading', { name: '谈过的细节' })
+      .closest('section')!
+    await user.click(
+      within(detailSection).getByRole('button', { name: '新增' }),
+    )
+
+    const dialog = screen.getByRole('dialog', { name: '添加细节' })
+    await user.type(within(dialog).getByLabelText('类别'), '重点')
+    const editor = within(dialog).getByLabelText('内容')
+    await user.type(editor, '需要标红的细节')
+
+    const textNode = Array.from(editor.childNodes).find(
+      (node) => node.nodeType === Node.TEXT_NODE,
+    ) as Text | undefined
+    const range = document.createRange()
+    range.setStart(textNode!, 2)
+    range.setEnd(textNode!, 4)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    fireEvent(document, new Event('selectionchange'))
+
+    await user.click(within(dialog).getByRole('button', { name: '红' }))
+    await user.click(
+      within(dialog).getByRole('button', { name: '保存细节' }),
+    )
+
+    const paragraph = await waitFor(() => {
+      const found = Array.from(
+        detailSection.querySelectorAll('.timeline-content p'),
+      ).find((item) => item.textContent === '需要标红的细节')
+      expect(found).toBeTruthy()
+      return found as HTMLElement
+    })
+    const colored = Array.from(paragraph.querySelectorAll('span')).find(
+      (item) => item.textContent === '标红',
+    )
+    expect(colored).toHaveStyle({ color: '#E8481F' })
+    expect(paragraph.textContent).toBe('需要标红的细节')
   })
 })

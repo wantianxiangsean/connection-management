@@ -119,6 +119,8 @@ export interface DetailEntry {
   personId: string
   category: string
   content: string
+  contentHtml?: string
+  color?: string
   observedOn: string
   followUpOn: string | null
   createdAt: string
