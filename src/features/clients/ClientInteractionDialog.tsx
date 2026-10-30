@@ -68,14 +68,15 @@ export function ClientInteractionDialog({
             </select>
           </label>
         </div>
-        <label>
+        <label className="form-grow">
           <span>沟通内容</span>
           <textarea
             autoFocus
+            className="interaction-summary-input"
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
             placeholder="聊了什么、对方关注什么、下一步是什么"
-            rows={5}
+            rows={8}
           />
         </label>
         <footer>

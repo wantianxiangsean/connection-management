@@ -379,7 +379,7 @@ export function DetailDialog({
             required
           />
         </label>
-        <div className="detail-content-field">
+        <div className="detail-content-field form-grow">
           <span>内容</span>
           <div className="detail-editor-wrap">
             <div

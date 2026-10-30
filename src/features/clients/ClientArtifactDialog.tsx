@@ -71,13 +71,13 @@ export function ClientArtifactDialog({
             </small>
           </label>
         ) : null}
-        <label>
+        <label className="form-grow">
           <span>{label}说明</span>
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="合作内容、进度或需要注意的事"
-            rows={4}
+            rows={8}
           />
         </label>
         <footer>
