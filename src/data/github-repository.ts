@@ -26,6 +26,7 @@ export class GitHubRepository implements WorkspaceRepository {
   private transientUser: SessionUser | null = null
   private saveTail: Promise<void> = Promise.resolve()
   private listeners = new Set<(user: SessionUser | null) => void>()
+  private attachmentUrls = new Map<string, string>()
 
   constructor(options: GitHubRepositoryOptions = {}) {
     this.storage = options.storage ?? window.localStorage
@@ -57,8 +58,10 @@ export class GitHubRepository implements WorkspaceRepository {
       const data = (await response.json()) as { content?: string }
       if (!data.content) throw new Error('云端档案格式无效')
       const snapshot = JSON.parse(decodeBase64(data.content)) as DatabaseSnapshot
+      const migrated = await this.externalizeInlineAttachments(snapshot)
       this.storage.setItem(this.key, JSON.stringify(snapshot))
       this.storage.removeItem(`${this.key}-pending-cloud`)
+      if (migrated) void this.save(snapshot).catch(() => undefined)
       return snapshot
     } catch (cause) {
       if (cached && !forceRemote) {
@@ -87,6 +90,7 @@ export class GitHubRepository implements WorkspaceRepository {
   }
 
   private async saveSnapshot(snapshot: DatabaseSnapshot) {
+    await this.externalizeInlineAttachments(snapshot)
     const serialized = JSON.stringify(snapshot)
     this.cache(snapshot)
     const token = this.getToken()
@@ -186,23 +190,85 @@ export class GitHubRepository implements WorkspaceRepository {
     detailEntryId?: string | null,
     interactionId?: string | null,
   ): Promise<Attachment> {
-    const dataUrl = await fileToDataUrl(file)
+    const token = this.getToken()
+    if (!token) throw new Error('请先连接私有云端再添加附件')
+    const id = `attachment-${crypto.randomUUID()}`
+    const path = attachmentPath(id, extensionForFile(file))
+    const content = encodeBytesBase64(await readFileBytes(file))
+    const response = await this.putFileContents(
+      token,
+      path,
+      content,
+      `添加附件：${file.name}`,
+    )
+    if (!response.ok) throw await createGitHubWriteError(response)
     return {
-      id: `attachment-${crypto.randomUUID()}`,
+      id,
       personId,
       detailEntryId: detailEntryId ?? null,
       interactionId: interactionId ?? null,
       fileName: file.name,
       mimeType: file.type,
       size: file.size,
-      storagePath: dataUrl,
-      signedUrl: dataUrl,
+      storagePath: path,
       createdAt: new Date().toISOString(),
     }
   }
 
   async getAttachmentUrl(path: string) {
-    return path
+    if (/^(https?:|data:|blob:)/i.test(path)) return path
+    const cached = this.attachmentUrls.get(path)
+    if (cached) return cached
+    const token = this.getToken()
+    if (!token) throw new Error('需要连接私有云端才能读取附件')
+    const response = await this.fetcher(
+      `https://api.github.com/repos/${this.repository}/contents/${contentPath(path)}?ref=${this.branch}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.raw',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      },
+    )
+    if (!response.ok) throw new Error('附件读取失败')
+    const blob = await response.blob()
+    const typed = blob.type.startsWith('application/vnd.github.raw')
+      ? new Blob([blob], { type: mimeForPath(path) })
+      : blob
+    const url = URL.createObjectURL(typed)
+    this.attachmentUrls.set(path, url)
+    return url
+  }
+
+  private async externalizeInlineAttachments(snapshot: DatabaseSnapshot) {
+    const inline = snapshot.attachments.filter((attachment) =>
+      attachment.storagePath.startsWith('data:'),
+    )
+    if (!inline.length) return false
+    const token = this.getToken()
+    if (!token) return false
+    let changed = false
+    for (const attachment of inline) {
+      const decoded = decodeDataUrl(attachment.storagePath)
+      if (!decoded) continue
+      const path = attachmentPath(attachment.id, decoded.extension)
+      try {
+        const response = await this.putFileContents(
+          token,
+          path,
+          decoded.base64,
+          `迁移附件：${attachment.fileName}`,
+        )
+        if (!response.ok) continue
+        attachment.storagePath = path
+        delete attachment.signedUrl
+        changed = true
+      } catch {
+        // Keep the inline copy when the upload fails so no attachment is lost.
+      }
+    }
+    return changed
   }
 
   private getToken() {
@@ -223,13 +289,24 @@ export class GitHubRepository implements WorkspaceRepository {
     })
   }
 
-  private async putContents(
+  private putContents(token: string, content: string) {
+    return this.putFileContents(
+      token,
+      this.path,
+      content,
+      '同步见微人脉档案',
+    )
+  }
+
+  private async putFileContents(
     token: string,
+    path: string,
     content: string,
+    message: string,
   ) {
     let sha: string | undefined
     const current = await this.api(
-      `/repos/${this.repository}/contents/${encodeURIComponent(this.path)}?ref=${this.branch}`,
+      `/repos/${this.repository}/contents/${contentPath(path)}?ref=${this.branch}`,
       token,
     )
     if (current.ok) {
@@ -249,13 +326,13 @@ export class GitHubRepository implements WorkspaceRepository {
       return current
     }
     return this.api(
-      `/repos/${this.repository}/contents/${encodeURIComponent(this.path)}`,
+      `/repos/${this.repository}/contents/${contentPath(path)}`,
       token,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: '同步见微人脉档案',
+          message,
           content,
           branch: this.branch,
           ...(sha ? { sha } : {}),
@@ -266,7 +343,10 @@ export class GitHubRepository implements WorkspaceRepository {
 }
 
 function encodeBase64(value: string) {
-  const bytes = new TextEncoder().encode(value)
+  return encodeBytesBase64(new TextEncoder().encode(value))
+}
+
+function encodeBytesBase64(bytes: Uint8Array) {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return btoa(binary)
@@ -278,13 +358,67 @@ function decodeBase64(value: string) {
   return new TextDecoder().decode(bytes)
 }
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
+function readFileBytes(file: File): Promise<Uint8Array> {
+  if (typeof file.arrayBuffer === 'function') {
+    return file.arrayBuffer().then((buffer) => new Uint8Array(buffer))
+  }
+  return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer))
     reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
+    reader.readAsArrayBuffer(file)
   })
+}
+
+function contentPath(path: string) {
+  return path.split('/').map(encodeURIComponent).join('/')
+}
+
+function attachmentPath(id: string, extension: string) {
+  const name = id.replace(/[^A-Za-z0-9_-]/g, '') || crypto.randomUUID()
+  return `attachments/${name}.${extension}`
+}
+
+function extensionForFile(file: File) {
+  const fromName = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (/^[a-z0-9]{1,8}$/.test(fromName)) return fromName
+  return extensionForMime(file.type)
+}
+
+function extensionForMime(mimeType: string) {
+  const mime = mimeType.toLowerCase()
+  if (mime === 'image/png') return 'png'
+  if (mime === 'image/jpeg') return 'jpg'
+  if (mime === 'image/gif') return 'gif'
+  if (mime === 'image/webp') return 'webp'
+  if (mime === 'image/svg+xml') return 'svg'
+  if (mime === 'application/pdf') return 'pdf'
+  if (mime === 'text/plain') return 'txt'
+  return 'bin'
+}
+
+function mimeForPath(path: string) {
+  const extension = path.split('.').pop()?.toLowerCase() ?? ''
+  const types: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+  }
+  return types[extension] ?? 'application/octet-stream'
+}
+
+function decodeDataUrl(value: string) {
+  const match = /^data:([^;,]+)?;base64,(.*)$/s.exec(value)
+  if (!match) return null
+  return {
+    base64: match[2],
+    extension: extensionForMime(match[1] ?? ''),
+  }
 }
 
 function delay(milliseconds: number) {

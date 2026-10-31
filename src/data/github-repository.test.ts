@@ -484,4 +484,147 @@ describe('github private repository', () => {
     expect(localStorage.getItem('github-test-github-token')).toBeNull()
     expect(localStorage.getItem('github-test-session')).toBeNull()
   })
+
+  it('stores new attachments as their own repository files', async () => {
+    const fetcher = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/user')) return jsonResponse({ login: 'owner' })
+        if (url.includes('/contents/attachments/')) {
+          if (init?.method === 'PUT') {
+            return jsonResponse({ content: { sha: 'sha-attachment' } }, 201)
+          }
+          return jsonResponse({ message: 'Not Found' }, 404)
+        }
+        return jsonResponse({ private: true, permissions: { push: true } })
+      },
+    )
+    const repository = new GitHubRepository({
+      storage: localStorage,
+      key: 'github-test',
+      fetcher,
+    })
+    await repository.signIn('valid-token')
+
+    const attachment = await repository.uploadAttachment(
+      new File(['hello'], 'note.txt', { type: 'text/plain' }),
+      'person-1',
+    )
+
+    expect(attachment.storagePath).toMatch(
+      /^attachments\/attachment-[0-9a-f-]+\.txt$/,
+    )
+    expect(attachment.signedUrl).toBeUndefined()
+    const putCall = fetcher.mock.calls.find(
+      ([input, init]) =>
+        String(input).includes('/contents/attachments/') &&
+        init?.method === 'PUT',
+    )
+    const body = JSON.parse(String(putCall?.[1]?.body)) as {
+      content: string
+      message: string
+    }
+    expect(body.content).toBe(btoa('hello'))
+    expect(body.message).toContain('添加附件')
+  })
+
+  it('reads private attachments through an authenticated raw request', async () => {
+    const fetcher = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/user')) return jsonResponse({ login: 'owner' })
+        if (url.includes('/contents/attachments/')) {
+          return new Response(new Blob(['image-bytes'], { type: 'image/png' }))
+        }
+        return jsonResponse({ private: true, permissions: { push: true } })
+      },
+    )
+    const createObjectURL = vi.fn(() => 'blob:attachment-1')
+    URL.createObjectURL = createObjectURL
+    const repository = new GitHubRepository({
+      storage: localStorage,
+      key: 'github-test',
+      fetcher,
+    })
+    await repository.signIn('valid-token')
+
+    await expect(
+      repository.getAttachmentUrl('attachments/photo.png'),
+    ).resolves.toBe('blob:attachment-1')
+    await repository.getAttachmentUrl('attachments/photo.png')
+
+    const calls = fetcher.mock.calls.filter(([input]) =>
+      String(input).includes('/contents/attachments/'),
+    )
+    expect(calls).toHaveLength(1)
+    expect(calls[0][1]?.headers).toMatchObject({
+      Accept: 'application/vnd.github.raw',
+      Authorization: 'Bearer valid-token',
+    })
+  })
+
+  it('migrates inline attachments out of the workspace snapshot', async () => {
+    const dataUrl = `data:text/plain;base64,${btoa('hello')}`
+    const cloud = {
+      ...emptySnapshot(),
+      attachments: [
+        {
+          id: 'attachment-legacy',
+          personId: 'person-1',
+          detailEntryId: null,
+          fileName: 'note.txt',
+          mimeType: 'text/plain',
+          size: 5,
+          storagePath: dataUrl,
+          signedUrl: dataUrl,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    }
+    const workspaceWrites: string[] = []
+    const fetcher = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/user')) return jsonResponse({ login: 'owner' })
+        if (url.includes('/contents/attachments/')) {
+          if (init?.method === 'PUT') {
+            return jsonResponse({ content: { sha: 'sha-attachment' } }, 201)
+          }
+          return jsonResponse({ message: 'Not Found' }, 404)
+        }
+        if (url.includes('/contents/workspace.json')) {
+          if (init?.method === 'PUT') {
+            const body = JSON.parse(String(init.body)) as { content: string }
+            workspaceWrites.push(body.content)
+            return jsonResponse({ content: { sha: 'sha-workspace' } })
+          }
+          return jsonResponse({
+            content: encodeBase64(JSON.stringify(cloud)),
+          })
+        }
+        return jsonResponse({ private: true, permissions: { push: true } })
+      },
+    )
+    const repository = new GitHubRepository({
+      storage: localStorage,
+      key: 'github-test',
+      fetcher,
+    })
+    await repository.signIn('valid-token')
+
+    const loaded = await repository.load()
+
+    expect(loaded.attachments[0].storagePath).toBe(
+      'attachments/attachment-legacy.txt',
+    )
+    expect(loaded.attachments[0].signedUrl).toBeUndefined()
+    expect(localStorage.getItem('github-test')).not.toContain('data:text/plain')
+    await vi.waitFor(() => expect(workspaceWrites).toHaveLength(1))
+    const saved = JSON.parse(
+      atob(workspaceWrites[0]),
+    ) as typeof cloud
+    expect(saved.attachments[0].storagePath).toBe(
+      'attachments/attachment-legacy.txt',
+    )
+  })
 })
