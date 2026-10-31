@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import {
   Cloud,
   CloudAlert,
@@ -11,7 +12,16 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
-      <Outlet />
+      <Suspense
+        fallback={
+          <div className="app-loading" role="status">
+            <span className="loading-mark" />
+            正在打开页面
+          </div>
+        }
+      >
+        <Outlet />
+      </Suspense>
       {error ? (
         <aside className="save-toast is-error" role="alert">
           <CloudAlert size={18} aria-hidden="true" />

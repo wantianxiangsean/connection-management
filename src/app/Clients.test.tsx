@@ -61,6 +61,7 @@ describe('clients and partners', () => {
     await user.click(within(dialog).getByRole('button', { name: '保存' }))
 
     await screen.findByRole('heading', { name: '青禾科技' })
+    await screen.findByRole('link', { name: '返回客户/伙伴' })
     expect(window.location.hash).toMatch(/^#\/clients\/client-/)
     expect(screen.getByText('伙伴')).toBeInTheDocument()
     expect(screen.getByText('杭州市西湖区')).toBeInTheDocument()

@@ -68,8 +68,12 @@ describe('settings workflows', () => {
   it('restores a soft-deleted person from the recycle bin', async () => {
     const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '林知秋' }))
-    await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
-    const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
+    await user.click(
+      await screen.findByRole('button', { name: '编辑基本资料' }),
+    )
+    const profileDialog = await screen.findByRole('dialog', {
+      name: '编辑基本资料',
+    })
     await user.click(
       within(profileDialog).getByRole('button', { name: '删除联系人' }),
     )
@@ -88,8 +92,12 @@ describe('settings workflows', () => {
   it('permanently clears the recycle bin after confirmation', async () => {
     const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '林知秋' }))
-    await user.click(screen.getByRole('button', { name: '编辑基本资料' }))
-    const profileDialog = screen.getByRole('dialog', { name: '编辑基本资料' })
+    await user.click(
+      await screen.findByRole('button', { name: '编辑基本资料' }),
+    )
+    const profileDialog = await screen.findByRole('dialog', {
+      name: '编辑基本资料',
+    })
     await user.click(
       within(profileDialog).getByRole('button', { name: '删除联系人' }),
     )

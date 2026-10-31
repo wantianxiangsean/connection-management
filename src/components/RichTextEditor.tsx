@@ -109,7 +109,7 @@ export function RichTextEditor({
 
   function applyColor(color: string) {
     const selection = window.getSelection()
-    let range =
+    const range =
       selection && !selection.isCollapsed && selection.rangeCount
         ? selection.getRangeAt(0)
         : savedRangeRef.current

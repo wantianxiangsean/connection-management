@@ -11,8 +11,6 @@ interface LocalRepositoryOptions {
   seed?: boolean
 }
 
-const SESSION_PHONE = '本地预览'
-
 export class LocalRepository implements WorkspaceRepository {
   mode = 'local' as const
   private storage: Storage

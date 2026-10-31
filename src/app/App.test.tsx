@@ -11,7 +11,6 @@ import { emptySnapshot } from '../domain/workspace'
 import { App } from './App'
 import { queryClient } from './WorkspaceContext'
 import { LocalRepository } from '../data/local-repository'
-import { createSampleSnapshot } from '../data/sample-data'
 
 describe('archive application flow', () => {
   beforeEach(() => {

@@ -109,6 +109,23 @@ export function WorkspaceProvider({
     [],
   )
 
+  useEffect(() => {
+    const flushPending = () => {
+      const latest = snapshotRef.current
+      if (!latest || !pendingRef.current) return
+      void saveQueue.current?.flush(latest).catch(() => undefined)
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushPending()
+    }
+    window.addEventListener('pagehide', flushPending)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('pagehide', flushPending)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
   const value = useMemo<WorkspaceValue | null>(() => {
     if (!snapshot) return null
     return {
