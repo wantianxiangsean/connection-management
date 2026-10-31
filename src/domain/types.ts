@@ -154,6 +154,7 @@ export interface ClientContact {
   influence: Influence | null
   attitude: ContactAttitude
   note: string
+  noteHtml?: string
   methods: ContactMethod[]
   position: number
   createdAt: string
@@ -167,6 +168,7 @@ export interface ClientArtifact {
   kind: ClientArtifactKind
   name: string
   note: string
+  noteHtml?: string
   industry: string
   position: number
   createdAt: string
@@ -186,6 +188,7 @@ export interface ClientInteraction {
   occurredOn: string
   channel: InteractionChannel
   summary: string
+  summaryHtml?: string
   position: number
   createdAt: string
 }

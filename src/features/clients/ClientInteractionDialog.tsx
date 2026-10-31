@@ -1,6 +1,12 @@
 import { format } from 'date-fns'
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
+import { RichTextEditor } from '../../components/RichTextEditor'
+import {
+  htmlToPlainText,
+  plainTextToHtml,
+  sanitizeDetailHtml,
+} from '../../domain/rich-text'
 import {
   channelLabels,
   type ClientInteraction,
@@ -18,6 +24,7 @@ export function ClientInteractionDialog({
     occurredOn: string
     channel: InteractionChannel
     summary: string
+    summaryHtml: string
   }) => void
 }) {
   const [occurredOn, setOccurredOn] = useState(
@@ -26,12 +33,25 @@ export function ClientInteractionDialog({
   const [channel, setChannel] = useState<InteractionChannel>(
     initial?.channel ?? 'meeting',
   )
-  const [summary, setSummary] = useState(initial?.summary ?? '')
+  const initialHtml = useMemo(() => {
+    const fromHtml = initial?.summaryHtml
+      ? sanitizeDetailHtml(initial.summaryHtml)
+      : ''
+    if (fromHtml.trim()) return fromHtml
+    return plainTextToHtml(initial?.summary ?? '')
+  }, [initial])
+  const [summaryHtml, setSummaryHtml] = useState(initialHtml)
+  const summary = htmlToPlainText(summaryHtml).trim()
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (!summary.trim()) return
-    onSave({ occurredOn, channel, summary: summary.trim() })
+    if (!summary) return
+    onSave({
+      occurredOn,
+      channel,
+      summary,
+      summaryHtml: sanitizeDetailHtml(summaryHtml),
+    })
   }
 
   return (
@@ -68,26 +88,21 @@ export function ClientInteractionDialog({
             </select>
           </label>
         </div>
-        <label className="form-grow">
+        <div className="detail-content-field form-grow">
           <span>沟通内容</span>
-          <textarea
-            autoFocus
-            className="interaction-summary-input"
-            value={summary}
-            onChange={(event) => setSummary(event.target.value)}
+          <RichTextEditor
+            initialHtml={initialHtml}
+            onChange={setSummaryHtml}
+            ariaLabel="沟通内容"
             placeholder="聊了什么、对方关注什么、下一步是什么"
-            rows={8}
+            autoFocus
           />
-        </label>
+        </div>
         <footer>
           <button type="button" className="button ghost" onClick={onClose}>
             取消
           </button>
-          <button
-            type="submit"
-            className="button primary"
-            disabled={!summary.trim()}
-          >
+          <button type="submit" className="button primary" disabled={!summary}>
             保存
           </button>
         </footer>

@@ -1,5 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
+import { RichTextEditor } from '../../components/RichTextEditor'
+import {
+  htmlToPlainText,
+  plainTextToHtml,
+  sanitizeDetailHtml,
+} from '../../domain/rich-text'
 import {
   clientArtifactLabels,
   type ClientArtifact,
@@ -18,20 +24,29 @@ export function ClientArtifactDialog({
   onSave: (value: {
     name: string
     note: string
+    noteHtml: string
     industry: string
   }) => void
 }) {
   const label = clientArtifactLabels[kind]
   const [name, setName] = useState(initial?.name ?? '')
-  const [note, setNote] = useState(initial?.note ?? '')
   const [industry, setIndustry] = useState(initial?.industry ?? '')
+  const initialHtml = useMemo(() => {
+    const fromHtml = initial?.noteHtml
+      ? sanitizeDetailHtml(initial.noteHtml)
+      : ''
+    if (fromHtml.trim()) return fromHtml
+    return plainTextToHtml(initial?.note ?? '')
+  }, [initial])
+  const [noteHtml, setNoteHtml] = useState(initialHtml)
 
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) return
     onSave({
       name: name.trim(),
-      note: note.trim(),
+      note: htmlToPlainText(noteHtml).trim(),
+      noteHtml: sanitizeDetailHtml(noteHtml),
       industry: kind === 'solution' ? industry.trim() : '',
     })
   }
@@ -71,15 +86,15 @@ export function ClientArtifactDialog({
             </small>
           </label>
         ) : null}
-        <label className="form-grow">
+        <div className="detail-content-field form-grow">
           <span>{label}说明</span>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
+          <RichTextEditor
+            initialHtml={initialHtml}
+            onChange={setNoteHtml}
+            ariaLabel={`${label}说明`}
             placeholder="合作内容、进度或需要注意的事"
-            rows={8}
           />
-        </label>
+        </div>
         <footer>
           <button type="button" className="button ghost" onClick={onClose}>
             取消

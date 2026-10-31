@@ -1,5 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
+import { RichTextEditor } from '../../components/RichTextEditor'
+import {
+  htmlToPlainText,
+  plainTextToHtml,
+  sanitizeDetailHtml,
+} from '../../domain/rich-text'
 import {
   contactAttitudeLabels,
   influenceLabels,
@@ -25,6 +31,7 @@ export function ClientContactEditDialog({
     influence: Influence | null
     attitude: ContactAttitude
     note: string
+    noteHtml: string
     methods: ContactMethod[]
   }) => void
 }) {
@@ -34,7 +41,14 @@ export function ClientContactEditDialog({
     contact.influence ?? '',
   )
   const [attitude, setAttitude] = useState<ContactAttitude>(contact.attitude)
-  const [note, setNote] = useState(contact.note)
+  const initialNoteHtml = useMemo(() => {
+    const fromHtml = contact.noteHtml
+      ? sanitizeDetailHtml(contact.noteHtml)
+      : ''
+    if (fromHtml.trim()) return fromHtml
+    return plainTextToHtml(contact.note ?? '')
+  }, [contact])
+  const [noteHtml, setNoteHtml] = useState(initialNoteHtml)
   const [methods, setMethods] = useState<ContactMethod[]>(contact.methods)
 
   function submit(event: FormEvent) {
@@ -45,7 +59,8 @@ export function ClientContactEditDialog({
       title: title.trim(),
       influence: influence === '' ? null : influence,
       attitude,
-      note: note.trim(),
+      note: htmlToPlainText(noteHtml).trim(),
+      noteHtml,
       methods,
     })
   }
@@ -113,15 +128,16 @@ export function ClientContactEditDialog({
           </label>
         </div>
         <ContactMethodEditor value={methods} onChange={setMethods} />
-        <label>
+        <div className="detail-content-field">
           <span>备注</span>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
+          <RichTextEditor
+            initialHtml={initialNoteHtml}
+            onChange={setNoteHtml}
+            ariaLabel="备注"
             placeholder="决策习惯、关系背景或需要留意的事"
-            rows={3}
+            compact
           />
-        </label>
+        </div>
         <footer>
           <button type="button" className="button ghost" onClick={onClose}>
             取消

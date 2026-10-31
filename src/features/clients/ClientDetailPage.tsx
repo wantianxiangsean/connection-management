@@ -12,6 +12,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspace } from '../../app/WorkspaceContext'
 import { DialogFrame } from '../../components/DialogFrame'
 import { splitIndustries } from '../../domain/clients'
+import { sanitizeDetailHtml } from '../../domain/rich-text'
 import {
   addClientArtifact,
   addClientContact,
@@ -576,9 +577,17 @@ export function ClientDetailPage() {
                             ))}
                           </div>
                         ) : null}
-                        {contact.note ? (
+                        {contact.note || contact.noteHtml ? (
                           <p className="client-contact-note">
-                            {contact.note}
+                            {contact.noteHtml ? (
+                              <span
+                                dangerouslySetInnerHTML={{
+                                  __html: sanitizeDetailHtml(contact.noteHtml),
+                                }}
+                              />
+                            ) : (
+                              contact.note
+                            )}
                           </p>
                         ) : null}
                       </div>
@@ -676,7 +685,17 @@ export function ClientDetailPage() {
                           {channelLabels[item.channel]}
                         </span>
                       </div>
-                      <p className="client-item-note">{item.summary}</p>
+                      <p className="client-item-note">
+                        {item.summaryHtml ? (
+                          <span
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeDetailHtml(item.summaryHtml),
+                            }}
+                          />
+                        ) : (
+                          item.summary
+                        )}
+                      </p>
                     </div>
                     <div className="client-item-actions">
                       <button
@@ -779,8 +798,20 @@ export function ClientDetailPage() {
                         >
                           <div>
                             <strong>{item.name}</strong>
-                            {item.note ? (
-                              <p className="client-item-note">{item.note}</p>
+                            {item.note || item.noteHtml ? (
+                              <p className="client-item-note">
+                                {item.noteHtml ? (
+                                  <span
+                                    dangerouslySetInnerHTML={{
+                                      __html: sanitizeDetailHtml(
+                                        item.noteHtml,
+                                      ),
+                                    }}
+                                  />
+                                ) : (
+                                  item.note
+                                )}
+                              </p>
                             ) : null}
                             {item.kind === 'solution' &&
                             splitIndustries(item.industry).length ? (

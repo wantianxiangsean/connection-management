@@ -1094,6 +1094,7 @@ body.column-resizing * {
   outline: 0;
   background: var(--paper);
   padding: 11px 12px;
+  font-weight: 400;
 }
 
 .stack-form input:focus,
@@ -1227,6 +1228,7 @@ body.column-resizing * {
 
 .detail-content-field.form-grow .detail-content-editor {
   height: 100%;
+  max-height: none;
 }
 
 .detail-content-field {
@@ -1262,6 +1264,11 @@ body.column-resizing * {
 .detail-content-editor:focus {
   border-color: var(--pine);
   box-shadow: 0 0 0 3px rgba(47, 106, 88, 0.08);
+}
+
+.rich-text-editor.is-compact {
+  min-height: 120px;
+  max-height: 220px;
 }
 
 .detail-content-editor:empty::before {
@@ -3612,6 +3619,7 @@ button.data-action-card {
   color: var(--ink-soft);
   font-size: 0.8125rem;
   line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .client-contact-methods {

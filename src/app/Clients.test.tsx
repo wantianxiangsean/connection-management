@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from './App'
@@ -773,5 +779,51 @@ describe('clients and partners', () => {
     expect(
       screen.queryByText('确认年度框架、报价和排期'),
     ).not.toBeInTheDocument()
+  })
+
+  it('colors selected text in an interaction summary', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
+    const dialog = await screen.findByRole('dialog', { name: '新增客户' })
+    await user.type(within(dialog).getByLabelText('名称'), '青禾科技')
+    await user.click(within(dialog).getByLabelText('客户'))
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+    await screen.findByRole('heading', { name: '青禾科技' })
+
+    await user.click(screen.getByRole('button', { name: '新增互动' }))
+    const interactionDialog = await screen.findByRole('dialog', {
+      name: '记一次互动',
+    })
+    const editor = within(interactionDialog).getByLabelText('沟通内容')
+    await user.type(editor, '确认年度框架')
+    const textNode = Array.from(editor.childNodes).find(
+      (node) => node.nodeType === Node.TEXT_NODE,
+    ) as Text | undefined
+    const range = document.createRange()
+    range.setStart(textNode!, 2)
+    range.setEnd(textNode!, 4)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    fireEvent(document, new Event('selectionchange'))
+    await user.click(
+      within(interactionDialog).getByRole('button', { name: '红' }),
+    )
+    await user.click(
+      within(interactionDialog).getByRole('button', { name: '保存' }),
+    )
+
+    const paragraph = await waitFor(() => {
+      const found = Array.from(
+        document.querySelectorAll('.client-item-note'),
+      ).find((item) => item.textContent === '确认年度框架')
+      expect(found).toBeTruthy()
+      return found as HTMLElement
+    })
+    const colored = Array.from(paragraph.querySelectorAll('span')).find(
+      (item) => item.textContent === '年度',
+    )
+    expect(colored).toHaveStyle({ color: '#E8481F' })
   })
 })

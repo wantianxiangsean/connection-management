@@ -447,6 +447,7 @@ interface ClientContactDetails {
   influence?: Influence | null
   attitude?: ContactAttitude
   note?: string
+  noteHtml?: string
   methods?: ContactMethod[]
 }
 
@@ -465,13 +466,19 @@ function contactDetails(
   fallback: ClientContactDetails = {},
 ): Pick<
   ClientContact,
-  'title' | 'influence' | 'attitude' | 'note' | 'methods'
+  'title' | 'influence' | 'attitude' | 'note' | 'noteHtml' | 'methods'
 > {
   return {
     title: (target.title ?? fallback.title ?? '').trim(),
     influence: target.influence ?? fallback.influence ?? null,
     attitude: target.attitude ?? fallback.attitude ?? 'neutral',
     note: (target.note ?? fallback.note ?? '').trim(),
+    noteHtml:
+      target.noteHtml !== undefined
+        ? target.noteHtml.trim()
+        : target.note !== undefined
+          ? ''
+          : (fallback.noteHtml ?? ''),
     methods: normalizeContactMethods(
       target.methods ?? fallback.methods ?? [],
     ),
@@ -575,7 +582,7 @@ export function addClientArtifact(
   source: DatabaseSnapshot,
   clientId: string,
   kind: ClientArtifactKind,
-  input: { name: string; note?: string; industry?: string },
+  input: { name: string; note?: string; noteHtml?: string; industry?: string },
 ) {
   const snapshot = clone(source)
   if (!snapshot.clients.some((item) => item.id === clientId)) {
@@ -596,6 +603,7 @@ export function addClientArtifact(
     kind,
     name,
     note: input.note?.trim() ?? '',
+    noteHtml: input.noteHtml?.trim() ?? '',
     industry: input.industry?.trim() ?? '',
     position,
     createdAt: timestamp,
@@ -607,7 +615,7 @@ export function addClientArtifact(
 export function updateClientArtifact(
   source: DatabaseSnapshot,
   artifactId: string,
-  input: { name: string; note?: string; industry?: string },
+  input: { name: string; note?: string; noteHtml?: string; industry?: string },
 ) {
   const snapshot = clone(source)
   snapshot.clientArtifacts = snapshot.clientArtifacts.map((item) =>
@@ -616,6 +624,12 @@ export function updateClientArtifact(
           ...item,
           name: input.name.trim() || item.name,
           note: (input.note ?? item.note).trim(),
+          noteHtml:
+            input.noteHtml !== undefined
+              ? input.noteHtml.trim()
+              : input.note !== undefined
+                ? ''
+                : (item.noteHtml ?? ''),
           industry: (input.industry ?? item.industry).trim(),
           updatedAt: nowIso(),
         }
@@ -690,6 +704,7 @@ export function addClientInteraction(
     occurredOn: string
     channel: InteractionChannel
     summary: string
+    summaryHtml?: string
   },
 ) {
   const snapshot = clone(source)
@@ -707,6 +722,7 @@ export function addClientInteraction(
     occurredOn: input.occurredOn,
     channel: input.channel,
     summary,
+    summaryHtml: input.summaryHtml?.trim() ?? '',
     position,
     createdAt: nowIso(),
   } satisfies ClientInteraction)
@@ -720,6 +736,7 @@ export function updateClientInteraction(
     occurredOn: string
     channel: InteractionChannel
     summary: string
+    summaryHtml?: string
   },
 ) {
   const snapshot = clone(source)
@@ -730,6 +747,7 @@ export function updateClientInteraction(
           occurredOn: input.occurredOn,
           channel: input.channel,
           summary: input.summary.trim() || item.summary,
+          summaryHtml: input.summaryHtml?.trim() ?? '',
         }
       : item,
   )

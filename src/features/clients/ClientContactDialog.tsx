@@ -7,7 +7,9 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { DialogFrame } from '../../components/DialogFrame'
+import { RichTextEditor } from '../../components/RichTextEditor'
 import { matchesPersonName, sortBySurname } from '../../domain/alphabet'
+import { htmlToPlainText } from '../../domain/rich-text'
 import {
   contactAttitudeLabels,
   influenceLabels,
@@ -24,6 +26,7 @@ interface ContactDetails {
   influence: Influence | null
   attitude: ContactAttitude
   note: string
+  noteHtml: string
   methods: ContactMethod[]
 }
 
@@ -54,8 +57,10 @@ export function ClientContactDialog({
     influence: null,
     attitude: 'neutral',
     note: '',
+    noteHtml: '',
     methods: [],
   })
+  const [noteEditorKey, setNoteEditorKey] = useState(0)
   const listId = useId()
   const filteredCandidates = useMemo(
     () =>
@@ -121,15 +126,21 @@ export function ClientContactDialog({
       influence: null,
       attitude: 'neutral',
       note: '',
+      noteHtml: '',
       methods: [],
     })
+    setNoteEditorKey((current) => current + 1)
   }
 
   function persist(keepOpen: boolean) {
+    const filled = {
+      ...details,
+      note: htmlToPlainText(details.noteHtml).trim(),
+    }
     const target = newName.trim()
-      ? { name: newName.trim(), ...details }
+      ? { name: newName.trim(), ...filled }
       : personId
-        ? { personId, ...details }
+        ? { personId, ...filled }
         : null
     if (!target) return
     const saved = onSave(target, keepOpen)
@@ -325,20 +336,19 @@ export function ClientContactDialog({
             setDetails((current) => ({ ...current, methods }))
           }
         />
-        <label>
+        <div className="detail-content-field">
           <span>备注</span>
-          <textarea
-            value={details.note}
-            onChange={(event) =>
-              setDetails((current) => ({
-                ...current,
-                note: event.target.value,
-              }))
+          <RichTextEditor
+            key={noteEditorKey}
+            initialHtml={details.noteHtml}
+            onChange={(noteHtml) =>
+              setDetails((current) => ({ ...current, noteHtml }))
             }
+            ariaLabel="备注"
             placeholder="决策习惯、关系背景或需要留意的事"
-            rows={3}
+            compact
           />
-        </label>
+        </div>
         {error ? (
           <p className="form-error" role="alert">
             {error}
