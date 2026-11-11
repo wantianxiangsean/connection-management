@@ -2,23 +2,35 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { clearSettingsFromStartUrl } from './app/start-route'
-import { GitHubRepository } from './data/github-repository'
 import type { WorkspaceRepository } from './data/repository'
 import './styles.css'
 
-async function createRepository(): Promise<WorkspaceRepository> {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (url && key && !url.includes('your-project')) {
-    const { SupabaseRepository } = await import('./data/supabase-repository')
-    return new SupabaseRepository(url, key)
+async function detectRepository(): Promise<WorkspaceRepository> {
+  try {
+    const response = await fetch('/api/health', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    })
+    const contentType = response.headers.get('content-type') ?? ''
+    if (response.ok && contentType.includes('application/json')) {
+      const body = (await response.json()) as { ok?: boolean }
+      if (body.ok) {
+        const { CloudflareRepository } = await import(
+          './data/cloudflare-repository'
+        )
+        return new CloudflareRepository()
+      }
+    }
+  } catch {
+    // No backend (vite dev or static hosting); fall back to local storage.
   }
-  return new GitHubRepository()
+  const { LocalRepository } = await import('./data/local-repository')
+  return new LocalRepository()
 }
 
 clearSettingsFromStartUrl()
 
-void createRepository().then((repository) => {
+void detectRepository().then((repository) => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App repository={repository} />

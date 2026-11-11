@@ -1,16 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from '../../app/App'
-import { GitHubRepository } from '../../data/github-repository'
 import { LocalRepository } from '../../data/local-repository'
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
 
 async function openArchive() {
   const user = userEvent.setup()
@@ -127,50 +119,13 @@ describe('settings workflows', () => {
     expect(screen.queryByText('认识渠道')).not.toBeInTheDocument()
   })
 
-  it('verifies and remembers the cloud token inside cloud backup', async () => {
-    const user = userEvent.setup()
-    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
-      if (String(input).endsWith('/user')) {
-        return jsonResponse({ login: 'owner' })
-      }
-      return jsonResponse({
-        private: true,
-        permissions: { push: true },
-      })
-    })
-    render(
-      <App
-        repository={
-          new GitHubRepository({
-            storage: localStorage,
-            key: 'cloud-settings-test',
-            fetcher,
-          })
-        }
-      />,
-    )
-
-    await screen.findByRole('heading', { name: '155人脉管理' })
+  it('shows the private cloud section in local preview mode', async () => {
+    const user = await openArchive()
     await user.click(screen.getByRole('link', { name: '设置' }))
     await screen.findByRole('heading', { name: '设置' })
 
-    expect(screen.getByText(/自动备份已开启/)).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /手动备份/ }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('heading', { name: '账户' }),
-    ).not.toBeInTheDocument()
-    const tokenInput = await screen.findByPlaceholderText('ghp_ 或 github_pat_')
-    expect(screen.getByLabelText('在此浏览器记住')).toBeChecked()
-    await user.type(tokenInput, 'github_pat_test')
-    await user.click(screen.getByRole('button', { name: '验证 Token' }))
-
-    expect(
-      await screen.findByText('已连接私有云端 · owner'),
-    ).toBeInTheDocument()
-    expect(
-      localStorage.getItem('cloud-settings-test-github-token'),
-    ).toBe('github_pat_test')
+    expect(screen.getAllByText('本地预览模式').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /手动备份/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /从云端恢复/ })).toBeDisabled()
   })
 })

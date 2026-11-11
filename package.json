@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "deploy": "pnpm build && npx wrangler deploy",
+    "dev:cloud": "pnpm build && npx wrangler dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

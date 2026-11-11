@@ -31,4 +31,18 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['worker/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.worker,
+        ...globals.browser,
+        crypto: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
+      },
+    },
+  },
 )

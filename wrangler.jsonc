@@ -1,0 +1,25 @@
+{
+  "name": "connection-management",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/*"],
+    "not_found_handling": "none"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "WORKSPACE",
+      "id": "38d31c25f9ed4cf295cac520296a7c69"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "crm.seanwan.top",
+      "custom_domain": true
+    }
+  ],
+  "vars": {}
+}

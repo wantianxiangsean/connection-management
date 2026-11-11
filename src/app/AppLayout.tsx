@@ -48,9 +48,9 @@ export function AppLayout() {
           <div>
             <strong>已保存到本机</strong>
             <span>
-              {repository.mode === 'github'
-                ? '云端将在 2 分钟内自动同步。'
-                : '本机数据已更新。'}
+              {repository.mode === 'local'
+                ? '本机数据已更新。'
+                : '云端将在 2 分钟内自动同步。'}
             </span>
           </div>
         </aside>

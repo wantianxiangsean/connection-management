@@ -2,6 +2,8 @@
 
 一个单用户、桌面优先、适配手机的人脉档案系统。它把四类关系、人物近况、家庭与职业资料、共同认识的人、重要日期和谈过的细节放在同一张可检索的档案里。
 
+线上地址：https://crm.seanwan.top （Cloudflare Worker + KV，密码门保护）
+
 ## 本地运行
 
 ```bash
@@ -9,9 +11,16 @@ pnpm install
 pnpm dev
 ```
 
-开发模式与线上一致，默认读取 GitHub 私有仓库中的联系人数据，不再载入演示档案。首次打开需要在“设置 → 云端备份”验证有 `Contents: Read and write` 权限的 Token；未验证前档案列表为空。
+`vite dev` 没有后端，会自动使用浏览器本地存储和演示档案，适合改界面。
 
-生产构建固定使用 GitHub 私有数据仓库模式。页面可以直接打开，不再经过独立登录页；联系人数据保存在 `wantianxiangsean/connection-management-data` 的私有 `workspace.json` 中。首次进行云端备份或恢复时，在“设置 → 云端备份”验证有 `Contents: Read and write` 权限的 GitHub Token，并可按需勾选“在此浏览器记住”。修改会立即缓存在本机，自动备份每 2 分钟合并写入一次；手动备份可随时立即写入。Token 不会写入公开的 GitHub Pages 代码。
+要连真实云端数据（含密码登录），用 Worker 本地模式：
+
+```bash
+pnpm build
+npx wrangler dev
+```
+
+本地密码写在 `.dev.vars`（已 gitignore），默认是 `local-dev-password`，可自行修改。数据落在本地模拟的 KV 里，不碰线上。
 
 ```bash
 pnpm test
@@ -19,41 +28,47 @@ pnpm build
 pnpm test:e2e
 ```
 
-## Supabase 配置（可选）
-
-开发模式如需使用 Supabase，可执行迁移并配置环境变量：
+## 部署到 Cloudflare
 
 ```bash
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-public-key
+npx wrangler login
+npx wrangler kv namespace create WORKSPACE   # 把返回的 id 填进 wrangler.jsonc
+npx wrangler secret put SITE_PASSWORD        # 站点访问密码
+npx wrangler secret put AUTH_SECRET          # 登录 Cookie 的签名密钥，随便一串长随机字符
+pnpm build && npx wrangler deploy
 ```
 
-服务端迁移会创建 `connection-attachments` 私有 bucket、全部业务表、行级权限和工作区读取/保存函数。不要在前端或 GitHub 仓库中放入 service-role key。
+`wrangler.jsonc` 里已经绑定：
 
-## GitHub Pages 发布
+- 自定义域名 `crm.seanwan.top`（该域名需在同一个 Cloudflare 账号下）
+- 静态资源目录 `dist`，Worker 优先处理所有请求
+- KV 命名空间 `WORKSPACE`：整份档案存在 key `workspace`，附件存在 `att:<文件名>`
+- `workers_dev = false`，没有不受密码门保护的旁路域名
 
-项目使用 Hash Router 和 `base: './'`，可直接部署到仓库子路径。推送 `main` 后，`.github/workflows/pages.yml` 会测试、构建并发布 `dist/`。
+## 访问与数据
 
-在 GitHub 仓库中完成以下设置：
-
-1. Settings → Pages → Build and deployment → Source 选择 **GitHub Actions**。
-2. 推送 `main`，等待 Pages workflow 完成。
-
-生产构建固定使用 GitHub 私有云模式，不依赖 Supabase 环境变量。
+- 所有页面和接口都要求密码；登录状态是 30 天有效的 `HttpOnly` Cookie，由 Worker 用 HMAC 签名
+- 同一 IP 连续输错 10 次会锁 10 分钟
+- 未登录访问页面会跳转到 `/login`，访问 `/api/*` 返回 401
+- 设置页可以"退出登录"（清除 Cookie）
+- 数据只存在你自己的 Cloudflare 账户里：档案 JSON 在 KV `workspace`，附件在 KV `att:*`
+- 修改先写浏览器本机缓存，再在 2 分钟内自动同步云端；页面隐藏或关闭时也会立即补一次
+- 完整备份仍可在设置页导出为 JSON + 附件 ZIP
 
 ## 数据与行为
 
 - 关系层级：命友、密友、好友、认识的人、弱连接。
 - 命友、密友、好友默认显示完整档案列；认识的人和弱连接默认只显示姓名。
-- 非人脉“引用人物”不会进入归档表，可作为共同认识的人保留，之后可升级为联系人。
+- 非人脉"引用人物"不会进入归档表，可作为共同认识的人保留，之后可升级为联系人。
 - 删除人物进入 30 天回收站；完整备份导出为 JSON + 附件 ZIP。
-- 联系周期从未设置。只有用户为某个人填写周期后，才计算“宜联系”状态。
+- 联系周期从未设置。只有用户为某个人填写周期后，才计算"宜联系"状态。
 - 重要日期支持公历、农历和闰月；应用按上海本地日期计算提醒，不发送外部通知。
 
 ## 目录
 
+- `worker/index.js`：密码门、登录页与数据 API。
+- `wrangler.jsonc`：Worker、KV、静态资源与域名绑定。
 - `src/domain`：类型、校验、搜索、关系教练、日期与 CSV 规则。
-- `src/data`：本地与 Supabase 仓库、演示数据。
-- `src/features`：归档表、人物卡、设置与云端备份工作流。
-- `supabase/migrations`：数据库、RLS、Storage 与 RPC。
-- `.github/workflows/pages.yml`：GitHub Pages 自动发布。
+- `src/data`：Cloudflare / 本地仓库、演示数据。
+- `src/features`：归档表、人物卡、客户模块与设置工作流。
+- `.github/workflows/ci.yml`：lint、测试与构建检查。

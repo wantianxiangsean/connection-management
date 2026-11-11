@@ -11,3 +11,6 @@ artifacts/
 .superpowers/
 *.local
 
+.dev.vars
+.wrangler/
+.claude/

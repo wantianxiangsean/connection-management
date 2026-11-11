@@ -5,7 +5,6 @@ import {
   DatabaseBackup,
   Download,
   FileUp,
-  KeyRound,
   LogOut,
   Plus,
   RefreshCw,
@@ -16,7 +15,6 @@ import {
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { DialogFrame } from '../components/DialogFrame'
-import type { SessionUser } from '../data/repository'
 import type {
   CustomFieldDefinition,
   CustomFieldType,
@@ -69,26 +67,7 @@ export function SettingsPage() {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [cloudMessage, setCloudMessage] = useState('')
   const [cloudRestoreOpen, setCloudRestoreOpen] = useState(false)
-  const [cloudUser, setCloudUser] = useState<SessionUser | null>(null)
-  const [cloudToken, setCloudToken] = useState('')
-  const [rememberCloudToken, setRememberCloudToken] = useState(true)
-  const [cloudTokenBusy, setCloudTokenBusy] = useState(false)
-  const [cloudTokenError, setCloudTokenError] = useState('')
-  const [tokenFormOpen, setTokenFormOpen] = useState(false)
   const deleted = snapshot.people.filter((person) => person.deletedAt)
-
-  useEffect(() => {
-    if (repository.mode !== 'github') return
-    let active = true
-    void repository.getSession().then((session) => {
-      if (!active) return
-      setCloudUser(session)
-      setTokenFormOpen(!session)
-    })
-    return () => {
-      active = false
-    }
-  }, [repository])
 
   useEffect(() => {
     if (!location.pathname.endsWith('/cloud')) return
@@ -214,47 +193,6 @@ export function SettingsPage() {
       )
     } finally {
       setExporting(false)
-    }
-  }
-
-  async function verifyCloudToken(event: FormEvent) {
-    event.preventDefault()
-    setCloudTokenBusy(true)
-    setCloudTokenError('')
-    setCloudMessage('')
-    try {
-      const user = await repository.signIn(
-        cloudToken,
-        '',
-        rememberCloudToken,
-      )
-      setCloudUser(user)
-      setCloudToken('')
-      setTokenFormOpen(false)
-      setCloudMessage('GitHub Token 已验证，现在可以备份或恢复联系人。')
-    } catch (cause) {
-      setCloudTokenError(
-        cause instanceof Error ? cause.message : 'Token 验证失败，请重试',
-      )
-    } finally {
-      setCloudTokenBusy(false)
-    }
-  }
-
-  async function disconnectCloud() {
-    setCloudTokenBusy(true)
-    setCloudTokenError('')
-    try {
-      await repository.signOut()
-      setCloudUser(null)
-      setTokenFormOpen(true)
-      setCloudMessage('已从当前浏览器移除 GitHub Token。')
-    } catch (cause) {
-      setCloudTokenError(
-        cause instanceof Error ? cause.message : '无法移除 Token，请重试',
-      )
-    } finally {
-      setCloudTokenBusy(false)
     }
   }
 
@@ -524,164 +462,97 @@ export function SettingsPage() {
         ) : null}
       </section>
 
-      {repository.mode === 'github' ? (
-        <section className="settings-section" id="cloud">
-          <div className="settings-section-heading">
-            <div>
-              <h2>云端备份</h2>
-              <p>
-                联系人资料保存在私有 GitHub 仓库。Token 验证通过后，自动同步
-                每 2 分钟合并写入一次，手动备份可随时立即写入。
-              </p>
-            </div>
-          </div>
-          <div
-            className={`cloud-save-overview${error ? ' is-error' : ''}`}
-            role={error ? 'alert' : 'status'}
-          >
-            <RefreshCw
-              size={18}
-              aria-hidden="true"
-              className={saving ? 'is-spinning' : undefined}
-            />
-            <div>
-              <strong>
-                {error
-                  ? '自动备份需要处理'
-                  : saving
-                    ? '正在自动备份…'
-                    : pending
-                      ? '有修改，等待自动备份'
-                      : '自动备份已开启'}
-              </strong>
-              <span>
-                {error ??
-                  (pending
-                    ? '修改已保存在本机，云端将在 2 分钟内同步。'
-                    : '当前没有待同步修改；也可随时使用下方手动备份。')}
-              </span>
-            </div>
-          </div>
-          <form className="cloud-token-form" onSubmit={verifyCloudToken}>
-            <div className="cloud-connection-summary">
-              {cloudUser ? (
-                <ShieldCheck size={19} aria-hidden="true" />
-              ) : (
-                <KeyRound size={19} aria-hidden="true" />
-              )}
-              <div>
-                <strong>
-                  {cloudUser
-                    ? `已连接私有云端 · ${cloudUser.id}`
-                    : '验证 GitHub Token'}
-                </strong>
-                <span>
-                  {cloudUser
-                    ? '修改会在本机即时保存，并每 2 分钟合并同步到私有仓库。'
-                    : 'Token 仅用于访问私有联系人数据仓库。'}
-                </span>
-              </div>
-              {cloudUser ? (
-                <button
-                  type="button"
-                  className="text-button"
-                  disabled={cloudTokenBusy}
-                  onClick={disconnectCloud}
-                >
-                  <LogOut size={14} aria-hidden="true" />
-                  断开云端
-                </button>
-              ) : null}
-            </div>
-            {tokenFormOpen ? (
-              <div className="cloud-token-fields">
-                <label className="cloud-token-input">
-                  <span className="sr-only">GitHub Token</span>
-                  <span className="input-frame">
-                    <KeyRound size={16} aria-hidden="true" />
-                    <input
-                      name="github-token"
-                      type="password"
-                      autoComplete="off"
-                      placeholder="ghp_ 或 github_pat_"
-                      value={cloudToken}
-                      onChange={(event) => setCloudToken(event.target.value)}
-                      required
-                    />
-                  </span>
-                </label>
-                <label className="cloud-remember-token">
-                  <input
-                    type="checkbox"
-                    checked={rememberCloudToken}
-                    onChange={(event) =>
-                      setRememberCloudToken(event.target.checked)
-                    }
-                  />
-                  在此浏览器记住
-                </label>
-                <button
-                  type="submit"
-                  className="button primary"
-                  disabled={cloudTokenBusy}
-                >
-                  {cloudTokenBusy ? '正在验证…' : '验证 Token'}
-                </button>
-                {cloudUser ? (
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => setTokenFormOpen(false)}
-                  >
-                    取消更换
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="button ghost cloud-change-token"
-                onClick={() => setTokenFormOpen(true)}
-              >
-                <KeyRound size={15} aria-hidden="true" />
-                更换 Token
-              </button>
-            )}
-            {cloudTokenError ? (
-              <p className="form-error" role="alert">
-                {cloudTokenError}
-              </p>
-            ) : null}
-          </form>
-          <div className="data-actions cloud-actions">
-            <button
-              type="button"
-              className="data-action-card"
-              disabled={cloudBusy || !cloudUser}
-              onClick={backupToCloud}
-            >
-              <DatabaseBackup size={21} />
-              <strong>{cloudBusy ? '正在处理…' : '手动备份'}</strong>
-              <span>立即把当前全部联系人写入私有云端</span>
-            </button>
-            <button
-              type="button"
-              className="data-action-card"
-              disabled={cloudBusy || !cloudUser}
-              onClick={() => setCloudRestoreOpen(true)}
-            >
-              <Download size={21} />
-              <strong>从云端恢复</strong>
-              <span>用私有云端版本覆盖本机档案</span>
-            </button>
-          </div>
-          {cloudMessage ? (
-            <p className="success-note" role="status">
-              {cloudMessage}
+      <section className="settings-section" id="cloud">
+        <div className="settings-section-heading">
+          <div>
+            <h2>云端与访问</h2>
+            <p>
+              {repository.mode === 'local'
+                ? '当前是本地预览模式，数据只保存在这台设备的浏览器里。'
+                : '数据保存在带密码门的 Cloudflare 私有云端，修改会先存本机，再在 2 分钟内自动同步。'}
             </p>
+          </div>
+          {repository.mode === 'cloudflare' ? (
+            <a className="button ghost" href="/logout">
+              <LogOut size={15} aria-hidden="true" />
+              退出登录
+            </a>
           ) : null}
-        </section>
-      ) : null}
+        </div>
+        <div
+          className={`cloud-save-overview${error ? ' is-error' : ''}`}
+          role={error ? 'alert' : 'status'}
+        >
+          <RefreshCw
+            size={18}
+            aria-hidden="true"
+            className={saving ? 'is-spinning' : undefined}
+          />
+          <div>
+            <strong>
+              {error
+                ? '自动备份需要处理'
+                : saving
+                  ? '正在自动备份…'
+                  : pending
+                    ? '有修改，等待自动备份'
+                    : repository.mode === 'local'
+                      ? '本地预览模式'
+                      : '自动备份已开启'}
+            </strong>
+            <span>
+              {error ??
+                (pending
+                  ? '修改已保存在本机，云端将在 2 分钟内同步。'
+                  : repository.mode === 'local'
+                    ? '这里的修改只写入当前浏览器。'
+                    : '当前没有待同步修改；也可随时使用下方手动备份。')}
+            </span>
+          </div>
+        </div>
+        <div className="cloud-connection-summary">
+          <ShieldCheck size={19} aria-hidden="true" />
+          <div>
+            <strong>
+              {repository.mode === 'local'
+                ? '本机存储'
+                : '已连接私有云端 · Cloudflare'}
+            </strong>
+            <span>
+              {repository.mode === 'local'
+                ? '部署到 Cloudflare 后会自动切换为云端档案。'
+                : '访问需要密码，数据只保存在你自己的 Cloudflare 账户里。'}
+            </span>
+          </div>
+        </div>
+        <div className="data-actions cloud-actions">
+          <button
+            type="button"
+            className="data-action-card"
+            disabled={cloudBusy || repository.mode === 'local'}
+            onClick={backupToCloud}
+          >
+            <DatabaseBackup size={21} />
+            <strong>{cloudBusy ? '正在处理…' : '手动备份'}</strong>
+            <span>立即把当前全部资料写入私有云端</span>
+          </button>
+          <button
+            type="button"
+            className="data-action-card"
+            disabled={cloudBusy || repository.mode === 'local'}
+            onClick={() => setCloudRestoreOpen(true)}
+          >
+            <Download size={21} />
+            <strong>从云端恢复</strong>
+            <span>用私有云端版本覆盖本机档案</span>
+          </button>
+        </div>
+        {cloudMessage ? (
+          <p className="success-note" role="status">
+            {cloudMessage}
+          </p>
+        ) : null}
+      </section>
 
       <section className="settings-section" id="recycle">
         <div className="settings-section-heading">
