@@ -45,6 +45,10 @@ pnpm build && npx wrangler deploy
 - KV 命名空间 `WORKSPACE`：整份档案存在 key `workspace`，附件存在 `att:<文件名>`
 - `workers_dev = false`，没有不受密码门保护的旁路域名
 
+> 如果 `wrangler deploy` 最后报 `subdomain` / `10034`（账号邮箱未验证），脚本其实已经上传成功；
+> 由于不使用 workers.dev，只要自定义域名已绑定就不影响访问。换密码用
+> `npx wrangler secret put SITE_PASSWORD`，无需重新部署。
+
 ## 访问与数据
 
 - 所有页面和接口都要求密码；登录状态是 30 天有效的 `HttpOnly` Cookie，由 Worker 用 HMAC 签名
