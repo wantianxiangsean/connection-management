@@ -65,7 +65,7 @@ export function normalizeSnapshot(source: DatabaseSnapshot): DatabaseSnapshot {
     ...emptySnapshot(),
     ...source,
     clients: (source.clients ?? []).map(normalizeClient),
-    clientContacts: (source.clientContacts ?? []).map(normalizeClientContact),
+    clientContacts: normalizeClientContacts(source.clientContacts ?? []),
     clientArtifacts: (source.clientArtifacts ?? []).map((artifact) => ({
       ...artifact,
       industry: artifact.industry ?? '',
@@ -83,6 +83,24 @@ export function normalizeSnapshot(source: DatabaseSnapshot): DatabaseSnapshot {
   }
 }
 
+function normalizeClientContacts(contacts: ClientContact[]): ClientContact[] {
+  const normalized = contacts.map(normalizeClientContact)
+  const byId = new Map(normalized.map((contact) => [contact.id, contact]))
+  for (const contact of normalized) {
+    const manager = contact.managerId
+      ? byId.get(contact.managerId)
+      : undefined
+    if (
+      !manager ||
+      manager.id === contact.id ||
+      manager.clientId !== contact.clientId
+    ) {
+      contact.managerId = null
+    }
+  }
+  return normalized
+}
+
 function normalizeClientContact(contact: ClientContact): ClientContact {
   return {
     ...contact,
@@ -91,6 +109,7 @@ function normalizeClientContact(contact: ClientContact): ClientContact {
     attitude: contact.attitude ?? 'neutral',
     note: contact.note ?? '',
     methods: contact.methods ?? [],
+    managerId: contact.managerId ?? null,
     position: contact.position ?? 0,
   }
 }
@@ -519,6 +538,7 @@ export function addClientContact(
         title: person.occupation,
         influence: person.influence,
       }),
+      managerId: null,
       position,
       createdAt: nowIso(),
     }
@@ -541,6 +561,7 @@ export function addClientContact(
       personId: null,
       name,
       ...contactDetails(target),
+      managerId: null,
       position,
       createdAt: nowIso(),
     }
@@ -567,11 +588,57 @@ export function updateClientContact(
   return snapshot
 }
 
+export function setClientContactManager(
+  source: DatabaseSnapshot,
+  contactId: string,
+  managerId: string | null,
+) {
+  const snapshot = clone(source)
+  const contact = snapshot.clientContacts.find((item) => item.id === contactId)
+  if (!contact) throw new Error('联系人不存在')
+
+  if (managerId !== null) {
+    if (managerId === contactId) throw new Error('不能把自己设为上级')
+    const manager = snapshot.clientContacts.find((item) => item.id === managerId)
+    if (!manager || manager.clientId !== contact.clientId) {
+      throw new Error('上级联系人不存在')
+    }
+    let cursor: ClientContact | undefined = manager
+    while (cursor) {
+      if (cursor.id === contactId) throw new Error('不能把下属设为上级')
+      cursor = cursor.managerId
+        ? snapshot.clientContacts.find((item) => item.id === cursor!.managerId)
+        : undefined
+    }
+  }
+
+  contact.managerId = managerId
+  const siblings = snapshot.clientContacts.filter(
+    (item) =>
+      item.clientId === contact.clientId &&
+      item.id !== contact.id &&
+      (item.managerId ?? null) === managerId,
+  )
+  contact.position = siblings.reduce(
+    (max, item) => Math.max(max, item.position + 1),
+    0,
+  )
+  return snapshot
+}
+
 export function removeClientContact(
   source: DatabaseSnapshot,
   contactId: string,
 ) {
   const snapshot = clone(source)
+  const removed = snapshot.clientContacts.find((item) => item.id === contactId)
+  if (removed) {
+    for (const contact of snapshot.clientContacts) {
+      if (contact.managerId === contactId) {
+        contact.managerId = removed.managerId ?? null
+      }
+    }
+  }
   snapshot.clientContacts = snapshot.clientContacts.filter(
     (item) => item.id !== contactId,
   )

@@ -11,7 +11,12 @@ import { useCallback, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspace } from '../../app/WorkspaceContext'
 import { DialogFrame } from '../../components/DialogFrame'
-import { splitIndustries } from '../../domain/clients'
+import {
+  buildContactTree,
+  contactDescendantIds,
+  splitIndustries,
+  type ClientContactNode,
+} from '../../domain/clients'
 import { sanitizeDetailHtml } from '../../domain/rich-text'
 import {
   addClientArtifact,
@@ -26,6 +31,7 @@ import {
   removeClientInteraction,
   removeClientTodo,
   reorderClientItems,
+  setClientContactManager,
   toggleClientTodo,
   updateClientArtifact,
   updateClientContact,
@@ -52,6 +58,7 @@ import { ClientContactEditDialog } from './ClientContactEditDialog'
 import { ClientDialog } from './ClientDialog'
 import { ClientInteractionDialog } from './ClientInteractionDialog'
 import { ClientSolutionProductDialog } from './ClientSolutionProductDialog'
+import { useContactTreeDrag } from './useContactTreeDrag'
 import { useDragOrder } from './useDragOrder'
 
 const artifactSections: Array<{
@@ -113,7 +120,6 @@ export function ClientDetailPage() {
     },
     [update],
   )
-  const contactDrag = useDragOrder(reorderItems)
   const artifactDrag = useDragOrder(reorderItems)
   const todoDrag = useDragOrder(reorderItems)
   const interactionDrag = useDragOrder(reorderItems)
@@ -124,6 +130,19 @@ export function ClientDetailPage() {
     () => new Map(snapshot.people.map((person) => [person.id, person])),
     [snapshot.people],
   )
+
+  function moveContact(contactId: string, managerId: string | null) {
+    const descendants = contactDescendantIds(
+      contacts.map((item) => item.contact),
+      contactId,
+    )
+    if (managerId && descendants.has(managerId)) return
+    update((current) =>
+      setClientContactManager(current, contactId, managerId),
+    )
+  }
+
+  const contactDrag = useContactTreeDrag(moveContact)
 
   const contacts = useMemo(() => {
     if (!client) return []
@@ -188,6 +207,11 @@ export function ClientDetailPage() {
       )
   }, [client, snapshot.clientTodos])
 
+  const contactTree = useMemo(
+    () => buildContactTree(contacts.map((item) => item.contact)),
+    [contacts],
+  )
+
   const interactions = useMemo(() => {
     if (!client) return []
     return snapshot.clientInteractions
@@ -245,7 +269,6 @@ export function ClientDetailPage() {
   const availableProducts = products.filter(
     (item) => !attachedProductIds.has(item.id),
   )
-  const contactIds = contacts.map((item) => item.contact.id)
   const todoIds = todos.map((item) => item.id)
   const interactionIds = interactions.map((item) => item.id)
 
@@ -297,6 +320,155 @@ export function ClientDetailPage() {
     event.preventDefault()
     update((current) => deleteClient(current, activeClient.id))
     navigate('/clients')
+  }
+
+
+  function contactDisplayName(contact: ClientContact) {
+    return contact.personId
+      ? (peopleById.get(contact.personId)?.fullName ?? contact.name)
+      : contact.name
+  }
+
+  function renderContactCard(contact: ClientContact, managerName?: string) {
+    const person = contact.personId
+      ? peopleById.get(contact.personId)
+      : undefined
+    const name = person?.fullName ?? contact.name
+    return (
+      <div className="client-contact-card">
+        <div className="client-contact-body">
+          <div className="client-contact-line">
+            <strong>{name}</strong>
+            {contact.title ? (
+              <span className="client-contact-title">{contact.title}</span>
+            ) : null}
+          </div>
+          <div className="client-contact-meta-row">
+            {person ? (
+              <Link
+                to={`/people/${person.id}`}
+                className="client-contact-meta"
+              >
+                {person.tier ? tierLabels[person.tier] : '人脉档案'} · 查看档案
+              </Link>
+            ) : (
+              <span className="client-contact-meta">独立联系人</span>
+            )}
+            {contact.influence ? (
+              <span
+                className={`contact-badge influence-${contact.influence}`}
+              >
+                影响力 {influenceLabels[contact.influence]}
+              </span>
+            ) : null}
+            <span
+              className={`contact-badge attitude-${contact.attitude}`}
+            >
+              {contactAttitudeLabels[contact.attitude]}
+            </span>
+            {managerName ? (
+              <span className="client-contact-meta">
+                汇报给 {managerName}
+              </span>
+            ) : null}
+          </div>
+          {contact.methods.length ? (
+            <div className="client-contact-methods">
+              {contact.methods.map((method) => (
+                <span key={method.id} className="client-contact-method">
+                  <span className="client-contact-method-type">
+                    {contactMethodLabels[method.type]}
+                  </span>
+                  {method.type === 'phone' ? (
+                    <a href={`tel:${method.value}`}>{method.value}</a>
+                  ) : method.type === 'email' ? (
+                    <a href={`mailto:${method.value}`}>{method.value}</a>
+                  ) : (
+                    <span>{method.value}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {contact.note || contact.noteHtml ? (
+            <p className="client-contact-note">
+              {contact.noteHtml ? (
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeDetailHtml(contact.noteHtml),
+                  }}
+                />
+              ) : (
+                contact.note
+              )}
+            </p>
+          ) : null}
+        </div>
+        <div className="client-item-actions">
+          <button
+            type="button"
+            className="drag-handle"
+            aria-label={`拖动调整 ${name} 的汇报关系`}
+            onPointerDown={(event) =>
+              contactDrag.startDrag(
+                event,
+                contact.id,
+                contactDescendantIds(
+                  contacts.map((item) => item.contact),
+                  contact.id,
+                ),
+              )
+            }
+          >
+            <GripVertical size={15} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="icon-button client-contact-edit"
+            aria-label={`编辑联系人 ${name}`}
+            onClick={() => setEditingContact(contact)}
+          >
+            <Pencil size={15} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="icon-button client-contact-remove"
+            aria-label={`移除 ${name}`}
+            onClick={() => setRemovingContact({ contact, name })}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  function renderContactNode(
+    node: ClientContactNode,
+    managerName?: string,
+  ): React.ReactNode {
+    const id = node.contact.id
+    const classes =
+      [
+        contactDrag.draggingId === id ? 'is-dragging' : '',
+        contactDrag.overId === id && contactDrag.draggingId !== id
+          ? 'is-drag-over'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ') || undefined
+    return (
+      <li key={id} data-contact-id={id} className={classes}>
+        {renderContactCard(node.contact, managerName)}
+        {node.children.length ? (
+          <ul className="client-contact-children">
+            {node.children.map((child) =>
+              renderContactNode(child, contactDisplayName(node.contact)),
+            )}
+          </ul>
+        ) : null}
+      </li>
+    )
   }
 
   return (
@@ -477,7 +649,7 @@ export function ClientDetailPage() {
             <header className="client-contacts-heading">
               <div>
                 <h2>联系人</h2>
-                <p>可以从人脉档案里关联，也可以独立记录，并补充职务与态度。</p>
+                <p>可以从人脉档案里关联，也可以独立记录。拖动联系人卡片可设置上下级。</p>
               </div>
               <button
                 type="button"
@@ -493,142 +665,56 @@ export function ClientDetailPage() {
             </header>
 
             {contacts.length ? (
-              <ul className="client-contact-list">
-                {contacts.map(({ contact, person }) => {
-                  const name = person?.fullName ?? contact.name
-                  return (
-                    <li
-                      key={contact.id}
-                      data-drag-id={contact.id}
-                      className={
-                        [
-                          contactDrag.draggingId === contact.id
-                            ? 'is-dragging'
-                            : '',
-                          contactDrag.overId === contact.id &&
-                          contactDrag.draggingId !== contact.id
-                            ? 'is-drag-over'
-                            : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ') || undefined
-                      }
-                    >
-                      <div className="client-contact-body">
-                        <div className="client-contact-line">
-                          <strong>{name}</strong>
-                          {contact.title ? (
-                            <span className="client-contact-title">
-                              {contact.title}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="client-contact-meta-row">
-                          {person ? (
-                            <Link
-                              to={`/people/${person.id}`}
-                              className="client-contact-meta"
-                            >
-                              {person.tier
-                                ? tierLabels[person.tier]
-                                : '人脉档案'}
-                              · 查看档案
-                            </Link>
-                          ) : (
-                            <span className="client-contact-meta">
-                              独立联系人
-                            </span>
-                          )}
-                          {contact.influence ? (
-                            <span
-                              className={`contact-badge influence-${contact.influence}`}
-                            >
-                              影响力 {influenceLabels[contact.influence]}
-                            </span>
-                          ) : null}
-                          <span
-                            className={`contact-badge attitude-${contact.attitude}`}
+              <div className="client-contact-tree-wrap">
+                {contactTree.roots.length ? (
+                  <ul className="client-contact-tree">
+                    {contactTree.roots.map((node) => renderContactNode(node))}
+                  </ul>
+                ) : null}
+                {contactTree.unassigned.length ||
+                contactDrag.draggingId ? (
+                  <div
+                    className={`client-contact-pool${
+                      contactDrag.overPool ? ' is-drag-over' : ''
+                    }`}
+                    data-contact-pool-drop
+                  >
+                    <div className="client-contact-pool-heading">
+                      <h3>未设置汇报关系</h3>
+                      <span>
+                        {contactDrag.draggingId
+                          ? '松手移出汇报线'
+                          : `${contactTree.unassigned.length} 人 · 并排显示`}
+                      </span>
+                    </div>
+                    {contactTree.unassigned.length ? (
+                      <ul className="client-contact-pool-grid">
+                        {contactTree.unassigned.map((contact) => (
+                          <li
+                            key={contact.id}
+                            data-contact-id={contact.id}
+                            className={
+                              [
+                                contactDrag.draggingId === contact.id
+                                  ? 'is-dragging'
+                                  : '',
+                                contactDrag.overId === contact.id &&
+                                contactDrag.draggingId !== contact.id
+                                  ? 'is-drag-over'
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ') || undefined
+                            }
                           >
-                            {contactAttitudeLabels[contact.attitude]}
-                          </span>
-                        </div>
-                        {contact.methods.length ? (
-                          <div className="client-contact-methods">
-                            {contact.methods.map((method) => (
-                              <span
-                                key={method.id}
-                                className="client-contact-method"
-                              >
-                                <span className="client-contact-method-type">
-                                  {contactMethodLabels[method.type]}
-                                </span>
-                                {method.type === 'phone' ? (
-                                  <a href={`tel:${method.value}`}>
-                                    {method.value}
-                                  </a>
-                                ) : method.type === 'email' ? (
-                                  <a href={`mailto:${method.value}`}>
-                                    {method.value}
-                                  </a>
-                                ) : (
-                                  <span>{method.value}</span>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {contact.note || contact.noteHtml ? (
-                          <p className="client-contact-note">
-                            {contact.noteHtml ? (
-                              <span
-                                dangerouslySetInnerHTML={{
-                                  __html: sanitizeDetailHtml(contact.noteHtml),
-                                }}
-                              />
-                            ) : (
-                              contact.note
-                            )}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="client-item-actions">
-                        <button
-                          type="button"
-                          className="drag-handle"
-                          aria-label={`拖动排序 ${name}`}
-                          onPointerDown={(event) =>
-                            contactDrag.startDrag(
-                              event,
-                              contact.id,
-                              contactIds,
-                            )
-                          }
-                        >
-                          <GripVertical size={15} aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-button client-contact-edit"
-                          aria-label={`编辑联系人 ${name}`}
-                          onClick={() => setEditingContact(contact)}
-                        >
-                          <Pencil size={15} aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-button client-contact-remove"
-                          aria-label={`移除 ${name}`}
-                          onClick={() =>
-                            setRemovingContact({ contact, name })
-                          }
-                        >
-                          <X size={16} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+                            {renderContactCard(contact)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             ) : (
               <div className="empty-state client-contacts-empty">
                 <span className="empty-illustration">

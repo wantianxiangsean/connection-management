@@ -7,6 +7,8 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      '.wrangler/**',
+      '.claude/**',
       'node_modules/**',
       'test-results/**',
       'artifacts/**',

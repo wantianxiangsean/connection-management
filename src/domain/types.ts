@@ -156,6 +156,7 @@ export interface ClientContact {
   note: string
   noteHtml?: string
   methods: ContactMethod[]
+  managerId?: string | null
   position: number
   createdAt: string
 }

@@ -3517,13 +3517,45 @@ button.data-action-card {
   line-height: 1.6;
 }
 
-.client-contact-list {
+.client-contact-tree-wrap {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
 }
 
-.client-contact-list li {
+.client-contact-tree,
+.client-contact-children {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.client-contact-tree > li {
+  min-width: 0;
+}
+
+.client-contact-children {
+  margin: 8px 0 0 22px;
+  padding-left: 18px;
+  border-left: 2px solid rgba(47, 106, 88, 0.18);
+}
+
+.client-contact-children > li {
+  position: relative;
+  min-width: 0;
+}
+
+.client-contact-children > li::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  left: -20px;
+  width: 16px;
+  border-top: 2px solid rgba(47, 106, 88, 0.18);
+}
+
+.client-contact-card {
   display: flex;
   min-width: 0;
   align-items: flex-start;
@@ -3535,28 +3567,72 @@ button.data-action-card {
   padding: 12px;
 }
 
-.client-contact-list li > .client-contact-body {
+.client-contact-card > .client-contact-body {
   display: grid;
   min-width: 0;
   flex: 1;
   gap: 3px;
 }
 
-.client-contact-list .client-item-actions {
+.client-contact-card .client-item-actions {
   flex-direction: column;
   gap: 4px;
 }
 
-.client-contact-list .client-contact-edit,
-.client-contact-list .client-contact-remove {
+.client-contact-card .client-contact-edit,
+.client-contact-card .client-contact-remove {
   width: 26px;
   height: 26px;
 }
 
-.client-contact-list strong {
+.client-contact-card strong {
   font-size: 0.9375rem;
   font-weight: 650;
   overflow-wrap: anywhere;
+}
+
+.client-contact-pool {
+  display: grid;
+  gap: 10px;
+  border-top: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  padding-top: 14px;
+  transition: background 0.15s ease;
+}
+
+.client-contact-pool.is-drag-over {
+  background: rgba(47, 106, 88, 0.05);
+  outline: 2px dashed rgba(47, 106, 88, 0.45);
+  outline-offset: 8px;
+}
+
+.client-contact-pool-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.client-contact-pool-heading h3 {
+  font-size: 0.9375rem;
+}
+
+.client-contact-pool-heading span {
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+}
+
+.client-contact-pool-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.client-contact-pool-grid > li {
+  min-width: 0;
 }
 
 .client-contact-line {
@@ -3736,16 +3812,18 @@ button.data-action-card {
   cursor: grabbing;
 }
 
-.client-contact-list li.is-dragging,
+.client-contact-tree > li.is-dragging .client-contact-card,
+.client-contact-pool-grid > li.is-dragging .client-contact-card,
 .client-item-list li.is-dragging,
 .client-todo-list li.is-dragging {
   opacity: 0.45;
 }
 
-.client-contact-list li.is-drag-over,
+.client-contact-tree > li.is-drag-over > .client-contact-card,
+.client-contact-pool-grid > li.is-drag-over > .client-contact-card,
 .client-item-list li.is-drag-over,
 .client-todo-list li.is-drag-over {
-  outline: 2px dashed rgba(210, 83, 59, 0.55);
+  outline: 2px dashed rgba(47, 106, 88, 0.55);
   outline-offset: 2px;
 }
 
@@ -4109,20 +4187,25 @@ a.client-contact-meta:hover {
     grid-template-columns: 1fr;
   }
 
-  .client-contact-list {
+  .client-contact-pool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .client-contact-list li {
+  .client-contact-card {
     gap: 6px;
     padding: 10px;
   }
 
-  .client-contact-list .client-contact-edit,
-  .client-contact-list .client-contact-remove {
+  .client-contact-card .client-contact-edit,
+  .client-contact-card .client-contact-remove {
     width: 24px;
     height: 24px;
+  }
+
+  .client-contact-children {
+    margin-left: 10px;
+    padding-left: 12px;
   }
 
   .client-contacts-heading {

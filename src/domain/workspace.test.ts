@@ -23,6 +23,7 @@ import {
   removeCustomField,
   reorderClientItems,
   restorePerson,
+  setClientContactManager,
   softDeletePerson,
   toggleClientTodo,
   updateClientContact,
@@ -275,6 +276,97 @@ describe('clients and partners', () => {
       personId: null,
       name: '林知秋',
     })
+  })
+
+  it('moves contacts under a manager and appends reports in order', () => {
+    let snapshot = emptySnapshot()
+    const client = createClientRecord({ name: '青禾科技' })
+    snapshot = upsertClient(snapshot, client)
+    snapshot = addClientContact(snapshot, client.id, { name: '甲' })
+    snapshot = addClientContact(snapshot, client.id, { name: '乙' })
+    snapshot = addClientContact(snapshot, client.id, { name: '丙' })
+    const [first, second, third] = snapshot.clientContacts
+
+    snapshot = setClientContactManager(snapshot, second.id, first.id)
+    snapshot = setClientContactManager(snapshot, third.id, first.id)
+
+    const byId = new Map(snapshot.clientContacts.map((item) => [item.id, item]))
+    expect(byId.get(second.id)?.managerId).toBe(first.id)
+    expect(byId.get(third.id)?.managerId).toBe(first.id)
+    expect(byId.get(third.id)!.position).toBeGreaterThan(
+      byId.get(second.id)!.position,
+    )
+  })
+
+  it('rejects self, cyclic and cross-client managers', () => {
+    let snapshot = emptySnapshot()
+    const client = createClientRecord({ name: '青禾科技' })
+    const other = createClientRecord({ name: '远山贸易' })
+    snapshot = upsertClient(snapshot, client)
+    snapshot = upsertClient(snapshot, other)
+    snapshot = addClientContact(snapshot, client.id, { name: '甲' })
+    snapshot = addClientContact(snapshot, client.id, { name: '乙' })
+    snapshot = addClientContact(snapshot, other.id, { name: '外部' })
+    const [first, second] = snapshot.clientContacts
+
+    expect(() =>
+      setClientContactManager(snapshot, first.id, first.id),
+    ).toThrow('不能把自己设为上级')
+
+    const nested = setClientContactManager(snapshot, second.id, first.id)
+    expect(() =>
+      setClientContactManager(nested, first.id, second.id),
+    ).toThrow('不能把下属设为上级')
+
+    expect(() =>
+      setClientContactManager(
+        snapshot,
+        first.id,
+        snapshot.clientContacts[2].id,
+      ),
+    ).toThrow('上级联系人不存在')
+  })
+
+  it('promotes reports to the grand manager when a manager is removed', () => {
+    let snapshot = emptySnapshot()
+    const client = createClientRecord({ name: '青禾科技' })
+    snapshot = upsertClient(snapshot, client)
+    snapshot = addClientContact(snapshot, client.id, { name: '甲' })
+    snapshot = addClientContact(snapshot, client.id, { name: '乙' })
+    snapshot = addClientContact(snapshot, client.id, { name: '丙' })
+    const [first, second, third] = snapshot.clientContacts
+    snapshot = setClientContactManager(snapshot, second.id, first.id)
+    snapshot = setClientContactManager(snapshot, third.id, second.id)
+
+    snapshot = removeClientContact(snapshot, second.id)
+
+    expect(
+      snapshot.clientContacts.find((item) => item.id === third.id)?.managerId,
+    ).toBe(first.id)
+  })
+
+  it('drops manager links that point outside the client on load', () => {
+    let snapshot = emptySnapshot()
+    const client = createClientRecord({ name: '青禾科技' })
+    const other = createClientRecord({ name: '远山贸易' })
+    snapshot = upsertClient(snapshot, client)
+    snapshot = upsertClient(snapshot, other)
+    snapshot = addClientContact(snapshot, client.id, { name: '甲' })
+    snapshot = addClientContact(snapshot, other.id, { name: '外部' })
+    const [own, foreign] = snapshot.clientContacts
+
+    const broken = {
+      ...snapshot,
+      clientContacts: [
+        { ...own, managerId: foreign.id },
+        { ...foreign, managerId: 'missing-contact' },
+      ],
+    }
+
+    const normalized = normalizeSnapshot(broken)
+
+    expect(normalized.clientContacts[0].managerId).toBeNull()
+    expect(normalized.clientContacts[1].managerId).toBeNull()
   })
 
   it('fills client collections for older cloud snapshots', () => {

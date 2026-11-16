@@ -782,6 +782,73 @@ describe('clients and partners', () => {
     ).not.toBeInTheDocument()
   })
 
+
+  it('builds a reporting tree by dragging contacts', async () => {
+    const user = await openClients()
+
+    await user.click(screen.getAllByRole('button', { name: '新增' })[0])
+    const dialog = await screen.findByRole('dialog', { name: '新增客户' })
+    await user.type(within(dialog).getByLabelText('名称'), '树形测试')
+    await user.click(within(dialog).getByLabelText('客户'))
+    await user.click(within(dialog).getByRole('button', { name: '保存' }))
+    await screen.findByRole('heading', { name: '树形测试' })
+    await screen.findByRole('link', { name: '返回客户/伙伴' })
+
+    for (const name of ['经理', '销售', '运营']) {
+      await user.click(screen.getByRole('button', { name: '添加联系人' }))
+      const contactDialog = await screen.findByRole('dialog', {
+        name: '添加联系人',
+      })
+      await user.type(
+        within(contactDialog).getByLabelText(/联系人姓名/),
+        name,
+      )
+      await user.click(
+        within(contactDialog).getByRole('button', { name: '保存' }),
+      )
+      await screen.findByText(name)
+    }
+
+    expect(screen.getByText(/3 人 · 并排显示/)).toBeInTheDocument()
+
+    const managerNode = screen
+      .getByText('经理')
+      .closest('[data-contact-id]') as HTMLElement
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => managerNode,
+    })
+
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: '拖动调整 销售 的汇报关系' }),
+    )
+    fireEvent.pointerMove(document)
+    fireEvent.pointerUp(document)
+
+    expect(await screen.findByText('汇报给 经理')).toBeInTheDocument()
+    expect(screen.getByText(/1 人 · 并排显示/)).toBeInTheDocument()
+    const tree = document.querySelector('.client-contact-tree')
+    expect(tree?.textContent).toContain('经理')
+    expect(tree?.textContent).toContain('销售')
+
+    const pool = document.querySelector(
+      '[data-contact-pool-drop]',
+    ) as HTMLElement
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => pool,
+    })
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: '拖动调整 销售 的汇报关系' }),
+    )
+    fireEvent.pointerMove(document)
+    fireEvent.pointerUp(document)
+
+    await waitFor(() =>
+      expect(screen.queryByText('汇报给 经理')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText(/3 人 · 并排显示/)).toBeInTheDocument()
+  })
   it('colors selected text in an interaction summary', async () => {
     const user = await openClients()
 
