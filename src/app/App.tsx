@@ -30,7 +30,7 @@ const SettingsPage = lazy(() =>
   })),
 )
 
-const archiveUser: SessionUser = { id: 'archive-owner', phone: '' }
+const archiveUser: SessionUser = { id: 'archive-owner' }
 
 export function App({ repository }: { repository: WorkspaceRepository }) {
   return (

@@ -6,7 +6,7 @@ import { LocalRepository } from '../data/local-repository'
 import type { SessionUser } from '../data/repository'
 import { WorkspaceProvider, useWorkspace } from './WorkspaceContext'
 
-const user: SessionUser = { id: 'flush-owner', phone: '' }
+const user: SessionUser = { id: 'flush-owner' }
 
 function Editor() {
   const { update, pending } = useWorkspace()

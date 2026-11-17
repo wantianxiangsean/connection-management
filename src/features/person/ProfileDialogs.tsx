@@ -22,11 +22,7 @@ import {
   channelLabels,
   tierLabels,
   type CalendarType,
-  type CustomFieldDefinition,
-  type CustomFieldValue,
   type DetailEntry,
-  type Goal,
-  type GoalStatus,
   type ImportantDate,
   type InteractionChannel,
   type Interaction,
@@ -587,80 +583,6 @@ export function ConnectionDialog({
   )
 }
 
-export function GoalDialog({
-  initial,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  initial?: Goal
-  onClose: () => void
-  onSave: (value: {
-    title: string
-    details: string
-    status: GoalStatus
-    targetDate: string | null
-  }) => void
-  onDelete?: () => void
-}) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [details, setDetails] = useState(initial?.details ?? '')
-  const [status, setStatus] = useState<GoalStatus>(initial?.status ?? 'active')
-  const [targetDate, setTargetDate] = useState(initial?.targetDate ?? '')
-  return (
-    <DialogFrame title={initial ? '编辑目标' : '添加目标'} onClose={onClose}>
-      <form
-        className="stack-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (!title.trim()) return
-          onSave({ title, details, status, targetDate: targetDate || null })
-        }}
-      >
-        <label>
-          <span>目标</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} required />
-        </label>
-        <label>
-          <span>背景</span>
-          <textarea value={details} onChange={(event) => setDetails(event.target.value)} rows={4} />
-        </label>
-        <div className="form-grid">
-          <label>
-            <span>状态</span>
-            <select value={status} onChange={(event) => setStatus(event.target.value as GoalStatus)}>
-              <option value="active">进行中</option>
-              <option value="achieved">已实现</option>
-              <option value="paused">暂停</option>
-            </select>
-          </label>
-          <label>
-            <span>目标日期</span>
-            <input
-              type="date"
-              value={targetDate}
-              onChange={(event) => setTargetDate(event.target.value)}
-            />
-          </label>
-        </div>
-        <footer>
-          {initial && onDelete ? (
-            <button type="button" className="danger-text-button" onClick={onDelete}>
-              删除
-            </button>
-          ) : null}
-          <button type="button" className="button ghost" onClick={onClose}>
-            取消
-          </button>
-          <button type="submit" className="button primary">
-            保存
-          </button>
-        </footer>
-      </form>
-    </DialogFrame>
-  )
-}
-
 export function ImportantDateDialog({
   initial,
   onClose,
@@ -902,114 +824,6 @@ export function InteractionDialog({
           </button>
           <button type="submit" className="button primary" disabled={busy}>
             {busy ? '正在保存…' : '保存互动'}
-          </button>
-        </footer>
-      </form>
-    </DialogFrame>
-  )
-}
-
-export function CustomValuesDialog({
-  personId,
-  fields,
-  values,
-  onClose,
-  onSave,
-}: {
-  personId: string
-  fields: CustomFieldDefinition[]
-  values: CustomFieldValue[]
-  onClose: () => void
-  onSave: (values: CustomFieldValue[]) => void
-}) {
-  const [draft, setDraft] = useState<
-    Record<string, string | number | string[]>
-  >(
-    Object.fromEntries(
-      fields.map((field) => [
-        field.id,
-        values.find((item) => item.fieldId === field.id)?.value ?? '',
-      ]),
-    ),
-  )
-  return (
-    <DialogFrame title="编辑补充资料" onClose={onClose}>
-      <form
-        className="stack-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          onSave(
-            fields.map((field) => ({
-              id:
-                values.find((item) => item.fieldId === field.id)?.id ??
-                `custom-${crypto.randomUUID()}`,
-              personId,
-              fieldId: field.id,
-              value: draft[field.id] ?? '',
-            })),
-          )
-        }}
-      >
-        {fields.map((field) => (
-          <label key={field.id}>
-            <span>{field.label}</span>
-            {field.type === 'long_text' ? (
-              <textarea
-                value={String(draft[field.id] ?? '')}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-                rows={3}
-              />
-            ) : field.type === 'single_select' ? (
-              <select
-                value={String(draft[field.id] ?? '')}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              >
-                <option value="">未填写</option>
-                {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            ) : field.type === 'multi_select' ? (
-              <select
-                multiple
-                value={Array.isArray(draft[field.id]) ? (draft[field.id] as string[]) : []}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    [field.id]: Array.from(event.target.selectedOptions, (item) => item.value),
-                  }))
-                }
-              >
-                {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                value={String(draft[field.id] ?? '')}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, [field.id]: event.target.value }))
-                }
-              />
-            )}
-          </label>
-        ))}
-        {!fields.length ? <p className="empty-copy">还没有自定义维度，请先到设置中添加。</p> : null}
-        <footer>
-          <button type="button" className="button ghost" onClick={onClose}>
-            取消
-          </button>
-          <button type="submit" className="button primary">
-            保存
           </button>
         </footer>
       </form>

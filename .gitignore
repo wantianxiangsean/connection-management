@@ -7,7 +7,6 @@ playwright-report/
 artifacts/
 .env
 .env.*
-!.env.example
 .superpowers/
 *.local
 

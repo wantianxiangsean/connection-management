@@ -29,7 +29,6 @@ interface WorkspaceValue {
   error: string | null
   saveNow: () => Promise<void>
   repository: WorkspaceRepository
-  user: SessionUser
 }
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null)
@@ -71,14 +70,14 @@ export function WorkspaceProvider({
         current &&
         (pendingRef.current ||
           savingRef.current ||
-          repository.hasPendingCloud?.())
+          repository.hasPendingCloud())
       ) {
         void saveQueue.current?.enqueue(current)
         return
       }
       snapshotRef.current = data
       setSnapshot(data)
-      if (repository.hasPendingCloud?.()) {
+      if (repository.hasPendingCloud()) {
         void saveQueue.current?.enqueue(data)
       }
     }
@@ -135,7 +134,7 @@ export function WorkspaceProvider({
         setSnapshot((current) => {
           if (!current) return current
           const next = mutator(current)
-          repository.cache?.(next)
+          repository.cache(next)
           snapshotRef.current = next
           void saveQueue.current?.enqueue(next)
           return next
@@ -149,9 +148,8 @@ export function WorkspaceProvider({
         return saveQueue.current?.flush(snapshot) ?? Promise.resolve()
       },
       repository,
-      user,
     }
-  }, [snapshot, saving, pending, error, repository, user])
+  }, [snapshot, saving, pending, error, repository])
 
   if (query.isError) {
     return (

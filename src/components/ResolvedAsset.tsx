@@ -24,20 +24,6 @@ function useResolvedAsset(path: string, repository: WorkspaceRepository) {
   return resolved
 }
 
-export function ResolvedImage({
-  path,
-  alt,
-  repository,
-}: {
-  path: string
-  alt: string
-  repository: WorkspaceRepository
-}) {
-  const src = useResolvedAsset(path, repository)
-  if (!src) return null
-  return <img src={src} alt={alt} />
-}
-
 export function ResolvedAttachmentLink({
   attachment,
   repository,

@@ -212,7 +212,6 @@ export interface Attachment {
   mimeType: string
   size: number
   storagePath: string
-  signedUrl?: string
   createdAt: string
 }
 
@@ -243,14 +242,6 @@ export interface PersonBundle {
   interactions: Interaction[]
   connections: Person[]
   customValues: CustomFieldValue[]
-}
-
-export interface ConnectionSummary {
-  personId: string
-  relatedPersonId: string
-  relatedName: string
-  relatedKind: PersonKind
-  note: string
 }
 
 export interface DatabaseSnapshot {

@@ -14,7 +14,7 @@ function toYmd(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-export interface DateOccurrence {
+interface DateOccurrence {
   date: string
   fallbackToRegularMonth: boolean
 }
@@ -50,7 +50,7 @@ function lunarOccurrence(
   return null
 }
 
-export function resolveNextDateOccurrence(
+function resolveNextDateOccurrence(
   date: ImportantDate,
   today: string,
 ): DateOccurrence | null {

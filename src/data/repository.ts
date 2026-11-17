@@ -1,26 +1,17 @@
 import type { DatabaseSnapshot, Attachment } from '../domain/types'
 
-export type RepositoryMode = 'local' | 'cloudflare' | 'supabase'
+export type RepositoryMode = 'local' | 'cloudflare'
 
 export interface SessionUser {
   id: string
-  phone: string
 }
 
 export interface WorkspaceRepository {
   mode: RepositoryMode
   load(forceRemote?: boolean): Promise<DatabaseSnapshot>
   save(snapshot: DatabaseSnapshot): Promise<void>
-  cache?(snapshot: DatabaseSnapshot): void
-  hasPendingCloud?(): boolean
-  signIn(
-    identifier: string,
-    password: string,
-    remember?: boolean,
-  ): Promise<SessionUser>
-  signOut(): Promise<void>
-  getSession(): Promise<SessionUser | null>
-  onAuthStateChange(callback: (user: SessionUser | null) => void): () => void
+  cache(snapshot: DatabaseSnapshot): void
+  hasPendingCloud(): boolean
   uploadAttachment(
     file: File,
     personId: string,

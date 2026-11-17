@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sanitizeDetailHtml } from '../domain/rich-text'
 
-export const textColorOptions = [
+const textColorOptions = [
   { label: '默认（去掉选中部分的颜色）', value: '' },
   { label: '黑', value: '#111111' },
   { label: '浅灰', value: '#bcc5c1' },

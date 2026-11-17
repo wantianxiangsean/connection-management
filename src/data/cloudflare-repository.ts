@@ -1,14 +1,12 @@
 import type { Attachment, DatabaseSnapshot } from '../domain/types'
 import { emptySnapshot } from '../domain/workspace'
-import type { SessionUser, WorkspaceRepository } from './repository'
+import type { WorkspaceRepository } from './repository'
 
 interface CloudflareRepositoryOptions {
   storage?: Storage
   key?: string
   fetcher?: typeof fetch
 }
-
-const OWNER: SessionUser = { id: 'private-owner', phone: '' }
 
 export class CloudflareRepository implements WorkspaceRepository {
   mode = 'cloudflare' as const
@@ -129,21 +127,6 @@ export class CloudflareRepository implements WorkspaceRepository {
     return url
   }
 
-  async signIn(): Promise<SessionUser> {
-    throw new Error('请通过登录页输入密码进入')
-  }
-
-  async signOut() {
-    // The password gate lives in the Worker; /logout clears the session cookie.
-  }
-
-  async getSession() {
-    return OWNER
-  }
-
-  onAuthStateChange() {
-    return () => {}
-  }
 }
 
 function extensionForFile(file: File) {

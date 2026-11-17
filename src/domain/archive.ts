@@ -4,7 +4,7 @@ import type {
 
 export { tierLabels } from './types'
 
-export type ArchiveColumn =
+type ArchiveColumn =
   | 'fullName'
   | 'role'
   | 'occupation'
